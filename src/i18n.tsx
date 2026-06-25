@@ -16,12 +16,12 @@ type Entry = string | ((p: P) => string);
 // ── Korean Pokémon names (English key → 한국어). Missing entries fall back to English. ──
 const KO_NAME: Record<string, string> = {
   // Fairy
-  Igglybuff: '푸푸린', Cleffa: '삐', Snubbull: '블루', Ralts: '랄토스', Spritzee: '슈쁘', Flabébé: '플라베베', Swirlix: '나룸퉁이', Cutiefly: '베베놈',
+  Igglybuff: '푸푸린', Cleffa: '삐', Snubbull: '블루', Ralts: '랄토스', Spritzee: '슈쁘', Flabébé: '플라베베', Swirlix: '나룸퍼프', Cutiefly: '에블리',
   Jigglypuff: '푸린', Clefairy: '삐삐', Granbull: '그랑블루', Kirlia: '킬리아', Aromatisse: '프레프티르',
   Wigglytuff: '푸크린', Clefable: '픽시', Gardevoir: '가디안', Sylveon: '님피아',
   // Water
-  Squirtle: '꼬부기', Magikarp: '잉어킹', Psyduck: '고라파덕', Poliwag: '발챙이', Staryu: '별가사리', Tentacool: '왕눈해', Krabby: '크랩',
-  Wartortle: '어니부기', Gyarados: '갸라도스', Golduck: '골덕', Poliwhirl: '슈륙챙이',
+  Squirtle: '꼬부기', Magikarp: '잉어킹', Psyduck: '고라파덕', Poliwag: '발챙이', Horsea: '쏘드라', Staryu: '별가사리', Tentacool: '왕눈해', Krabby: '크랩',
+  Wartortle: '어니부기', Gyarados: '갸라도스', Golduck: '골덕', Poliwhirl: '슈륙챙이', Seadra: '시드라',
   Blastoise: '거북왕', Vaporeon: '샤미드', Lapras: '라프라스', Kingdra: '킹드라',
   // Grass
   Bulbasaur: '이상해씨', Oddish: '뚜벅쵸', Bellsprout: '모다피', Chikorita: '치코리타', Treecko: '나무지기', Hoppip: '통통코', Sunkern: '해너츠', Seedot: '도토링',
@@ -32,7 +32,7 @@ const KO_NAME: Record<string, string> = {
   Charmeleon: '리자드', Ninetales: '나인테일', Arcanine: '윈디', Rapidash: '날쌩마', Quilava: '마그케인',
   Charizard: '리자몽', Flareon: '부스터', Typhlosion: '블레이범', Magmortar: '마그마번',
   // Dark
-  Poochyena: '포챠나', Houndour: '델빌', Sneasel: '포푸니', Murkrow: '니로우', Zorua: '조로아', Purrloin: '다꼬', Impidimp: '메롱꿍',
+  Poochyena: '포챠나', Houndour: '델빌', Sneasel: '포푸니', Murkrow: '니로우', Zorua: '조로아', Purrloin: '쌔비냥', Nickit: '훔처우', Impidimp: '메롱꿍',
   Mightyena: '그라에나', Houndoom: '헬가', Weavile: '포푸니라', Honchkrow: '돈크로우', Zoroark: '조로아크',
   Tyranitar: '마기라스', Umbreon: '블래키', Absol: '앱솔', Hydreigon: '삼삼드래',
 };
