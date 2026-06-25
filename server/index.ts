@@ -82,6 +82,11 @@ function canControlRoom(room: Room, playerId: string): boolean {
   const m = room.members.get(playerId);
   return hostGone && !!m && !m.isAI && m.connected;
 }
+/** When the host has left and another player takes control, make them the new host. */
+function promoteHostIfGone(room: Room, playerId: string) {
+  const host = room.members.get(room.hostId);
+  if (playerId !== room.hostId && (!host || !host.connected)) room.hostId = playerId;
+}
 
 // ── Room cleanup ──────────────────────────────────────────────────────────
 // Abandoned in-progress/finished rooms are removed after a grace period so a
@@ -102,25 +107,44 @@ function scheduleRoomCleanup(room: Room) {
   }, ROOM_GRACE_MS);
   roomCleanup.set(room.id, t);
 }
-/** If it's an AI's turn, play one move after a short delay, then recurse for further AI turns. */
+// A disconnected human on their turn would otherwise freeze the table (AIs can't
+// move — not their turn; other humans can't act — not their turn). After this grace
+// the AI plays the absent player's turn so the game keeps going; if they reconnect
+// in time the timer yields and they resume control.
+const DISCONNECT_GRACE_MS = Number(process.env.DISCONNECT_GRACE_MS) || 30 * 1000;
+
+function isAbsentHumanTurn(room: Room): boolean {
+  if (!room.game) return false;
+  const cur = room.game.players[room.game.current];
+  if (cur.isAI) return false;
+  const m = room.members.get(cur.id);
+  return !m || !m.connected;
+}
+
+/** Keep the turn moving: auto-play AI turns (short delay) and disconnected-human
+ *  turns (after a grace period), then recurse for the next non-human-controlled turn. */
 function maybeRunAI(room: Room) {
   if (!room.game || room.status !== 'playing' || aiTimers.has(room.id)) return;
-  if (!room.game.players[room.game.current].isAI) return;
   if (!hasConnectedHuman(room)) return; // no one is watching — pause until a human (re)connects
+  const cur = room.game.players[room.game.current];
+  const absentHuman = isAbsentHumanTurn(room);
+  if (!cur.isAI && !absentHuman) return; // a connected human's turn — wait for them
+  const delay = cur.isAI ? 850 : DISCONNECT_GRACE_MS;
   const timer = setTimeout(() => {
     aiTimers.delete(room.id);
     if (!room.game || room.status !== 'playing') return;
-    const cur = room.game.players[room.game.current];
-    if (!cur.isAI) return;
+    const c = room.game.players[room.game.current];
+    const m = room.members.get(c.id);
+    if (!c.isAI && m && m.connected) return; // human reconnected in time — yield control back
     let res;
-    try { res = applyAction(room.game, cur.id, aiChooseAction(room.game)); }
-    catch (e) { console.error('AI move threw:', e); return; }
-    // Guard against an illegal AI move: stop (don't re-schedule) so we never spin forever.
-    if (!res.ok) { console.error('AI produced an illegal move:', res.error); return; }
+    try { res = applyAction(room.game, c.id, aiChooseAction(room.game)); }
+    catch (e) { console.error('auto move threw:', e); return; }
+    // Guard against an illegal move: stop (don't re-schedule) so we never spin forever.
+    if (!res.ok) { console.error('auto move was illegal:', res.error); return; }
     if (room.game.status === 'finished') room.status = 'finished';
     broadcastRoom(room);
     maybeRunAI(room);
-  }, 850);
+  }, delay);
   aiTimers.set(room.id, timer);
 }
 
@@ -151,11 +175,17 @@ io.on('connection', (socket) => {
     }
 
     cancelRoomCleanup(roomId); // a human is present again
+    // Only the absent CURRENT seat returning should cancel the auto-play grace —
+    // another player's reconnect must not restart someone else's clock (that would
+    // let a flapping bystander defer the auto-play indefinitely and re-freeze the table).
+    if (room.game && room.status === 'playing' && room.game.players[room.game.current].id === playerId) {
+      clearAITimer(roomId);
+    }
     socket.join(roomId);
     socketIndex.set(socket.id, { roomId, playerId });
     socket.emit('joined', { roomId, playerId, hostId: room.hostId });
     broadcastRoom(room);
-    maybeRunAI(room); // resume AI if a human reconnected mid-game
+    maybeRunAI(room); // resume AI / re-arm grace for whoever's turn it is
   });
 
   socket.on('addAI', () => {
@@ -226,6 +256,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(loc.roomId);
     if (!room) return;
     if (!canControlRoom(room, loc.playerId)) { emitError(socket.id, 'Only the host can restart.'); return; }
+    promoteHostIfGone(room, loc.playerId);
     const players: Player[] = room.order.map((pid) => {
       const m = room.members.get(pid)!;
       return newPlayer(m.id, m.name, m.isAI);
@@ -243,6 +274,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(loc.roomId);
     if (!room) return;
     if (!canControlRoom(room, loc.playerId)) { emitError(socket.id, 'Only the host can do that.'); return; }
+    promoteHostIfGone(room, loc.playerId);
     room.status = 'lobby';
     room.game = undefined;
     clearAITimer(room.id);
@@ -270,6 +302,9 @@ io.on('connection', (socket) => {
       scheduleRoomCleanup(room);
     }
     broadcastRoom(room);
+    // If the dropped player was the active seat, arm the grace timer so the table
+    // doesn't freeze (the AI takes over their turn if they don't return in time).
+    maybeRunAI(room);
   });
 });
 
