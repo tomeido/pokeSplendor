@@ -1,7 +1,7 @@
 // Verifies a human disconnecting ON THEIR TURN does not freeze the table:
 // after the grace period the AI auto-plays the absent seat so the game continues.
 // Spawns its own short-grace server. Run: npx tsx server/disconnect-turn.test.ts
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { io, type Socket } from 'socket.io-client';
@@ -59,10 +59,35 @@ async function main() {
     // Bob should be the one disconnected... no: Bob is connected; the absent Alice shows offline.
     ok(s.players.find((p) => p.id === 'DA')?.connected === false, 'Alice shows as disconnected');
 
-    b.sock.disconnect();
+    // ── Scenario 2: a bystander reconnecting must NOT reset the absent player's grace ──
+    const ROOM2 = 'DT' + ((Date.now() + 7) % 100000);
+    const c = await mkClient(); // host, plays first
+    const d = await mkClient();
+    c.sock.emit('join', { roomId: ROOM2, playerId: 'DC', name: 'Carol' });
+    await wait(120);
+    d.sock.emit('join', { roomId: ROOM2, playerId: 'DD', name: 'Dave' });
+    await wait(150);
+    c.sock.emit('startGame');
+    await wait(200);
+    ok(last(d.states)?.current === 0, "scenario 2: it is Carol's (current seat) turn");
+    const t2 = last(d.states)?.turnCount ?? 0;
+
+    c.sock.disconnect(); // Carol (the active seat) drops → ~400ms grace armed
+    // Dave (a bystander) keeps re-joining under the grace; with the bug each reset Carol's clock.
+    for (let i = 0; i < 5; i++) { await wait(180); d.sock.emit('join', { roomId: ROOM2, playerId: 'DD', name: 'Dave' }); }
+    await wait(150); // ~1050ms total; Carol's single 400ms grace should long since have fired
+    ok((last(d.states)?.turnCount ?? 0) > t2, "bystander's reconnects did not defer Carol's auto-play");
+
+    b.sock.disconnect(); d.sock.disconnect();
     await wait(60);
   } finally {
-    server.kill();
+    // shell:true on Windows means server.kill() only kills the shell, not the node
+    // grandchild — kill the whole tree so the port is freed for the next run.
+    if (process.platform === 'win32' && server.pid) {
+      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(server.pid)]); } catch { /* ignore */ }
+    } else {
+      server.kill();
+    }
   }
   console.log(failures ? `\n${failures} check(s) failed.` : '\n✓ Disconnect-on-turn no longer freezes the game.');
   process.exit(failures ? 1 : 0);

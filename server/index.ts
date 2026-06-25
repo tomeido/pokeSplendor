@@ -175,7 +175,12 @@ io.on('connection', (socket) => {
     }
 
     cancelRoomCleanup(roomId); // a human is present again
-    clearAITimer(roomId); // reset any auto-play grace so a reconnecting player resumes control
+    // Only the absent CURRENT seat returning should cancel the auto-play grace —
+    // another player's reconnect must not restart someone else's clock (that would
+    // let a flapping bystander defer the auto-play indefinitely and re-freeze the table).
+    if (room.game && room.status === 'playing' && room.game.players[room.game.current].id === playerId) {
+      clearAITimer(roomId);
+    }
     socket.join(roomId);
     socketIndex.set(socket.id, { roomId, playerId });
     socket.emit('joined', { roomId, playerId, hostId: room.hostId });
