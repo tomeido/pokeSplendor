@@ -374,6 +374,9 @@ function GameOver({
     (a, b) => b.points - a.points || a.purchased.length - b.purchased.length,
   );
   const winner = state.players.find((p) => p.id === state.winnerId);
+  // If the host left, let any remaining player control the rematch so no one is stuck.
+  const hostPlayer = state.players.find((p) => p.id === state.hostId);
+  const canControl = youHost || (hostPlayer ? !hostPlayer.connected : true);
   return (
     <div className="modal-backdrop">
       <div className="modal gameover">
@@ -389,7 +392,7 @@ function GameOver({
             </div>
           ))}
         </div>
-        {youHost ? (
+        {canControl ? (
           <div className="go-actions">
             <button className="btn primary" onClick={onRematch}>{t('go_rematch')}</button>
             <button className="btn ghost" onClick={onLobby}>{t('go_backLobby')}</button>

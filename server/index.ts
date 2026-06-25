@@ -68,6 +68,34 @@ function clearAITimer(roomId: string) {
 function hasConnectedHuman(room: Room): boolean {
   return room.order.some((pid) => { const m = room.members.get(pid)!; return !m.isAI && m.connected; });
 }
+/** Who may rematch / return to lobby: the host, or any connected human if the host has left. */
+function canControlRoom(room: Room, playerId: string): boolean {
+  if (playerId === room.hostId) return true;
+  const host = room.members.get(room.hostId);
+  const hostGone = !host || !host.connected;
+  const m = room.members.get(playerId);
+  return hostGone && !!m && !m.isAI && m.connected;
+}
+
+// ── Room cleanup ──────────────────────────────────────────────────────────
+// Abandoned in-progress/finished rooms are removed after a grace period so a
+// refresh (brief disconnect) can still reconnect, but memory isn't leaked forever.
+const ROOM_GRACE_MS = 2 * 60 * 1000;
+const roomCleanup = new Map<string, ReturnType<typeof setTimeout>>();
+
+function cancelRoomCleanup(roomId: string) {
+  const t = roomCleanup.get(roomId);
+  if (t) { clearTimeout(t); roomCleanup.delete(roomId); }
+}
+function scheduleRoomCleanup(room: Room) {
+  if (roomCleanup.has(room.id) || hasConnectedHuman(room)) return;
+  const t = setTimeout(() => {
+    roomCleanup.delete(room.id);
+    const r = rooms.get(room.id);
+    if (r && !hasConnectedHuman(r)) { clearAITimer(r.id); rooms.delete(r.id); }
+  }, ROOM_GRACE_MS);
+  roomCleanup.set(room.id, t);
+}
 /** If it's an AI's turn, play one move after a short delay, then recurse for further AI turns. */
 function maybeRunAI(room: Room) {
   if (!room.game || room.status !== 'playing' || aiTimers.has(room.id)) return;
@@ -78,8 +106,11 @@ function maybeRunAI(room: Room) {
     if (!room.game || room.status !== 'playing') return;
     const cur = room.game.players[room.game.current];
     if (!cur.isAI) return;
-    try { applyAction(room.game, cur.id, aiChooseAction(room.game)); }
-    catch (e) { console.error('AI move failed:', e); return; }
+    let res;
+    try { res = applyAction(room.game, cur.id, aiChooseAction(room.game)); }
+    catch (e) { console.error('AI move threw:', e); return; }
+    // Guard against an illegal AI move: stop (don't re-schedule) so we never spin forever.
+    if (!res.ok) { console.error('AI produced an illegal move:', res.error); return; }
     if (room.game.status === 'finished') room.status = 'finished';
     broadcastRoom(room);
     maybeRunAI(room);
@@ -113,6 +144,7 @@ io.on('connection', (socket) => {
       room.order.push(playerId);
     }
 
+    cancelRoomCleanup(roomId); // a human is present again
     socket.join(roomId);
     socketIndex.set(socket.id, { roomId, playerId });
     socket.emit('joined', { roomId, playerId, hostId: room.hostId });
@@ -187,7 +219,7 @@ io.on('connection', (socket) => {
     if (!loc) return;
     const room = rooms.get(loc.roomId);
     if (!room) return;
-    if (loc.playerId !== room.hostId) { emitError(socket.id, 'Only the host can restart.'); return; }
+    if (!canControlRoom(room, loc.playerId)) { emitError(socket.id, 'Only the host can restart.'); return; }
     const players: Player[] = room.order.map((pid) => {
       const m = room.members.get(pid)!;
       return newPlayer(m.id, m.name, m.isAI);
@@ -204,7 +236,7 @@ io.on('connection', (socket) => {
     if (!loc) return;
     const room = rooms.get(loc.roomId);
     if (!room) return;
-    if (loc.playerId !== room.hostId) { emitError(socket.id, 'Only the host can do that.'); return; }
+    if (!canControlRoom(room, loc.playerId)) { emitError(socket.id, 'Only the host can do that.'); return; }
     room.status = 'lobby';
     room.game = undefined;
     clearAITimer(room.id);
@@ -227,6 +259,9 @@ io.on('connection', (socket) => {
       const humans = room.order.filter((pid) => !room.members.get(pid)!.isAI);
       if (humans.length === 0) { clearAITimer(room.id); rooms.delete(room.id); return; }
       if (room.hostId === loc.playerId) room.hostId = humans[0];
+    } else if (!hasConnectedHuman(room)) {
+      // Game in progress/finished but everyone left — clean up after a grace period.
+      scheduleRoomCleanup(room);
     }
     broadcastRoom(room);
   });
