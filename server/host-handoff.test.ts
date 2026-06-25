@@ -42,6 +42,11 @@ async function main() {
   a.sock.disconnect();
   await wait(250);
 
+  // The broadcast must reflect the host as disconnected, or the client UI gate
+  // (which reads the in-game player's connected flag) would never offer rematch.
+  const hostInGuestView = last(b.states)?.players.find((p) => p.id === 'HA');
+  ok(hostInGuestView?.connected === false, "guest's game state shows the host as disconnected");
+
   // Now the remaining human may rematch (control transfers).
   b.errors.length = 0;
   const statesBefore = b.states.length;

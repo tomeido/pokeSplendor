@@ -44,6 +44,12 @@ function lobbyPayload(room: Room) {
 function broadcastRoom(room: Room) {
   if (room.status === 'playing' || room.status === 'finished') {
     if (!room.game) return;
+    // Sync live connection state into the game players so clients see who's online
+    // (e.g. the host-disconnected handoff and the in-game "offline" indicator).
+    for (const p of room.game.players) {
+      const m = room.members.get(p.id);
+      if (m) p.connected = m.connected;
+    }
     for (const pid of room.order) {
       const m = room.members.get(pid)!;
       if (m.socketId) io.to(m.socketId).emit('state', serializeFor(room.game, pid));
