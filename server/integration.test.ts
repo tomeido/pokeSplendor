@@ -4,7 +4,8 @@ import { io, type Socket } from 'socket.io-client';
 import type { ClientState } from '../shared/engine.ts';
 
 const URL = `http://localhost:${process.env.PORT || 3001}`;
-const ROOM = 'ITEST';
+// Unique room per run so repeated runs against a long-lived dev server stay isolated.
+const ROOM = ('IT' + (Date.now() % 1000000)).toUpperCase();
 let failures = 0;
 const ok = (c: boolean, m: string) => { if (!c) { console.error('  ✗', m); failures++; } else console.log('  ✓', m); };
 
