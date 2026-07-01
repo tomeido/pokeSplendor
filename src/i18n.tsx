@@ -54,6 +54,14 @@ const STRINGS: Record<Lang, Record<string, Entry>> = {
   en: {
     tagline: 'Pokémon Edition',
     conn_online: 'online', conn_connecting: 'connecting…',
+    visits_title: (p) => `Page views: ${p.views} · Unique visitors: ${p.visitors}`,
+    // Audio
+    audio_label: 'Sound', audio_musicOn: 'Music: on', audio_musicOff: 'Music: off',
+    audio_sfxOn: 'Sound effects: on', audio_sfxOff: 'Sound effects: off',
+    // Chat
+    chat_title: 'Chat', chat_open: 'Open chat', chat_close: 'Close chat',
+    chat_placeholder: 'Type a message…', chat_offline: 'Reconnecting…', chat_send: 'Send',
+    chat_empty: 'No messages yet — say hi! 👋',
     // Home
     home_title: 'Catch the gems. Become Champion.',
     home_sub: 'A faithful online version of Splendor, reskinned with Pokémon. Race to 15 points by collecting energy and recruiting Pokémon. Play with 2–4 friends — or solo against the computer.',
@@ -84,6 +92,8 @@ const STRINGS: Record<Lang, Record<string, Entry>> = {
     bank_take: 'Take energy', bank_take2title: 'Take 2 of this energy (needs 4+ in bank)',
     bank_reserveOnly: 'reserve only',
     card_recruit: 'Recruit', card_reserve: 'Reserve', card_reserveTitle: 'Reserve (+1 ⚡)',
+    reserved_need: (p) => `Need ${p.n} more energy to recruit`,
+    reserved_ready: (p) => `Ready to recruit ${p.name}`,
     deck_reserveTitle: 'Reserve the top card (blind) +1 ⚡', deck_title: (p) => `Tier ${p.tier} deck`, deck_reserve: 'reserve',
     nomoves_text: 'No moves available (bank empty, reserves full, nothing affordable).', nomoves_pass: 'Pass turn',
     log_title: 'Battle log',
@@ -110,6 +120,14 @@ const STRINGS: Record<Lang, Record<string, Entry>> = {
   ko: {
     tagline: '포켓몬 에디션',
     conn_online: '온라인', conn_connecting: '연결 중…',
+    visits_title: (p) => `페이지뷰: ${p.views} · 순 방문자: ${p.visitors}`,
+    // Audio
+    audio_label: '소리', audio_musicOn: '음악: 켜짐', audio_musicOff: '음악: 꺼짐',
+    audio_sfxOn: '효과음: 켜짐', audio_sfxOff: '효과음: 꺼짐',
+    // Chat
+    chat_title: '채팅', chat_open: '채팅 열기', chat_close: '채팅 닫기',
+    chat_placeholder: '메시지 입력…', chat_offline: '재연결 중…', chat_send: '보내기',
+    chat_empty: '아직 메시지가 없어요 — 인사해 보세요! 👋',
     home_title: '에너지를 모아 챔피언이 되세요!',
     home_sub: '보드게임 스플렌더를 포켓몬 테마로 재구성한 온라인 버전입니다. 에너지를 모으고 포켓몬을 영입해 15점에 먼저 도달하세요. 친구 2~4명과, 또는 혼자 컴퓨터와 즐기세요.',
     home_nameLabel: '트레이너 이름', home_namePlaceholder: '지우',
@@ -136,6 +154,8 @@ const STRINGS: Record<Lang, Record<string, Entry>> = {
     bank_take: '에너지 획득', bank_take2title: '이 에너지 2개 획득 (은행에 4개 이상 필요)',
     bank_reserveOnly: '예약 전용',
     card_recruit: '영입', card_reserve: '예약', card_reserveTitle: '예약 (+1 ⚡)',
+    reserved_need: (p) => `영입까지 에너지 ${p.n}개 더 필요`,
+    reserved_ready: (p) => `${p.name} 영입 가능`,
     deck_reserveTitle: '맨 위 카드 예약(비공개) +1 ⚡', deck_title: (p) => `${p.tier}티어 덱`, deck_reserve: '예약',
     nomoves_text: '할 수 있는 행동이 없습니다 (은행이 비었고, 예약이 가득 찼으며, 살 수 있는 카드가 없음).', nomoves_pass: '턴 넘기기',
     log_title: '배틀 로그',

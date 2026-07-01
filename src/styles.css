@@ -50,6 +50,15 @@ button:disabled { cursor: not-allowed; }
 .lang-toggle button { background: transparent; color: var(--muted); border: none; padding: 5px 11px; font-weight: 800; font-size: 12px; transition: .12s; }
 .lang-toggle button:hover { color: var(--text); }
 .lang-toggle button.active { background: var(--accent); color: #2a230a; }
+.audio-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg2); }
+.audio-toggle button { background: transparent; border: none; padding: 4px 9px; font-size: 14px; line-height: 1; filter: grayscale(1) opacity(.5); transition: .12s; }
+.audio-toggle button:hover { filter: grayscale(.4) opacity(.85); }
+.audio-toggle button.active { background: var(--panel2); filter: none; }
+.visits {
+  font-size: 12px; color: var(--muted); white-space: nowrap; cursor: default;
+  padding: 3px 10px; border-radius: 999px; background: var(--bg2); border: 1px solid var(--line);
+}
+@media (max-width: 480px) { .visits { display: none; } }
 .conn { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
 .conn.on { background: rgba(87, 217, 119, .15); color: var(--good); }
 .conn.off { background: rgba(227, 53, 13, .15); color: #ff8a6e; }
@@ -67,6 +76,8 @@ button:disabled { cursor: not-allowed; }
 
 /* ── Home ── */
 .home, .lobby { flex: 1; display: grid; place-items: center; padding: 24px; }
+/* Lift the lobby card above the fixed chat button so it never covers the Leave action. */
+.lobby { padding-bottom: 100px; }
 .home-card, .lobby-card {
   width: min(560px, 94vw); background: var(--panel); border: 1px solid var(--line);
   border-radius: 18px; padding: 28px; box-shadow: var(--shadow);
@@ -116,7 +127,8 @@ button:disabled { cursor: not-allowed; }
 .waiting { color: var(--muted); flex: 1; align-self: center; }
 
 /* ── Game layout ── */
-.game { flex: 1; padding: 12px 16px 24px; }
+/* Extra bottom padding keeps the last row of content clear of the fixed chat button. */
+.game { flex: 1; padding: 12px 16px 88px; }
 .turn-banner {
   display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;
   background: var(--panel); border: 1px solid var(--line); padding: 8px 16px; border-radius: 999px; font-weight: 700;
@@ -239,7 +251,7 @@ button:disabled { cursor: not-allowed; }
 .player-meta { display: flex; gap: 10px; font-size: 12px; color: var(--muted); }
 .reserved-row { display: flex; gap: 6px; margin-top: 8px; }
 .mini-card {
-  width: 52px; height: 64px; border-radius: 8px; background: linear-gradient(165deg, #2b3160, #20254a);
+  width: 52px; min-height: 84px; border-radius: 8px; background: linear-gradient(165deg, #2b3160, #20254a);
   border: 1px solid var(--line); border-top: 3px solid var(--bonus, #555); color: var(--text);
   display: flex; flex-direction: column; align-items: center; padding: 3px; position: relative; text-align: center;
 }
@@ -250,6 +262,20 @@ button:disabled { cursor: not-allowed; }
 .mc-sprite { width: 34px; height: 34px; object-fit: contain; margin-top: 8px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
 .mc-sprite.sprite-fallback { font-size: 18px; line-height: 34px; width: auto; }
 .mc-name { font-size: 9px; line-height: 1; margin-top: auto; font-weight: 700; }
+/* Reuse the board's CostPip, shrunk to fit the 52px reserved mini-card. */
+.mc-cost { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 3px; margin-top: 4px; }
+.mc-cost .pip { font-size: 8px; padding: 0 3px 0 2px; border-radius: 5px; gap: 1px; }
+.mc-cost .pip-icon { font-size: 8px; }
+/* A cost you already hold enough tokens for — dimmed so the outstanding colours stand out. */
+.pip.met { opacity: .32; }
+/* Corner badge: energy still needed to recruit the reserved card (or ✓ when ready). */
+.mc-need {
+  position: absolute; top: 2px; right: 3px; z-index: 1;
+  font-size: 9px; font-weight: 800; line-height: 1.4; letter-spacing: -.3px;
+  padding: 0 4px; border-radius: 999px; min-width: 15px; text-align: center;
+  background: var(--accent); color: #2a230a; box-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.mc-need.ready { background: var(--good); color: #0f2916; }
 
 /* ── Log ── */
 .log { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
@@ -292,6 +318,52 @@ button:disabled { cursor: not-allowed; }
 }
 @keyframes rise { from { transform: translate(-50%, 10px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
+/* ── Chat ── */
+.chat-fab {
+  position: fixed; right: 18px; bottom: 18px; z-index: 40;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  background: linear-gradient(180deg, #ffd84d, var(--accent)); color: #2a230a;
+  box-shadow: var(--shadow); font-size: 24px; line-height: 1; display: grid; place-items: center;
+  transition: .12s;
+}
+.chat-fab:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.chat-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px;
+  background: var(--red); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 800;
+  display: grid; place-items: center; border: 2px solid var(--bg);
+}
+.chat-panel {
+  position: fixed; z-index: 45; top: 0; right: 0; bottom: 0; width: min(360px, 92vw);
+  background: var(--panel); border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, .4); display: flex; flex-direction: column;
+  animation: chatIn .18s ease;
+}
+@keyframes chatIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 800; flex: 0 0 auto;
+}
+.chat-x { background: transparent; border: none; color: var(--muted); font-size: 16px; padding: 4px 9px; border-radius: 8px; }
+.chat-x:hover { color: var(--text); background: var(--bg2); }
+.chat-msgs { flex: 1 1 auto; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-empty { color: var(--muted); font-size: 13px; text-align: center; margin: auto 0; }
+.chat-msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 85%; }
+.chat-msg.mine { align-self: flex-end; align-items: flex-end; }
+.chat-name { font-size: 11px; color: var(--muted); font-weight: 700; margin: 0 0 2px 3px; }
+.chat-bubble {
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 7px 11px; font-size: 14px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;
+}
+.chat-msg.mine .chat-bubble { background: linear-gradient(180deg, #ffd84d, var(--accent)); color: #2a230a; border: none; }
+.chat-input-row { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); flex: 0 0 auto; }
+.chat-input {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; background: var(--bg2);
+  border: 1px solid var(--line); color: var(--text); font-size: 15px; outline: none;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-input:disabled { opacity: .5; }
+.chat-send { padding: 10px 14px; }
+
 /* ── Smaller screens: keep the board usable down to phone width ── */
 @media (max-width: 720px) {
   .game { padding: 10px 10px 24px; }
@@ -311,4 +383,72 @@ button:disabled { cursor: not-allowed; }
   .card-cost { gap: 3px; }
   .pip { padding: 1px 4px 1px 2px; font-size: 11px; }
   .room-code .code { font-size: 34px; letter-spacing: 5px; }
+  /* Free up header room for the language + audio toggles on narrow phones. */
+  .brand em { display: none; }
+  .topbar { padding: 10px 12px; }
+  .topbar-right { gap: 8px; }
+  /* Lift the toast above an open, near-full-width chat panel's input row. */
+  .toast { bottom: 84px; }
+}
+
+/* ── Landscape phones: use the wide, short viewport (two columns + compact sizing).
+   Placed last so it overrides the width-based rules above when both match. ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .topbar { position: static; padding: 5px 12px; }
+  .brand { font-size: 15px; }
+  .brand .ball { width: 15px; height: 15px; }
+  .topbar-right { gap: 8px; }
+
+  .game { padding: 8px 10px 64px; }
+  .turn-banner { margin-bottom: 8px; padding: 5px 14px; font-size: 13px; }
+
+  /* Board beside the players/log instead of stacked, so scores stay in view. */
+  .game-grid { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); gap: 10px; }
+  .sidebar { position: static; top: auto; }
+
+  .board { gap: 8px; }
+  .nobles { gap: 6px; }
+  .noble { width: 58px; min-height: 58px; padding: 5px; }
+  .noble-name { font-size: 9px; margin-top: 12px; }
+  .nreq { width: 15px; height: 15px; font-size: 9px; }
+
+  .tier-row { gap: 6px; }
+  .tier-cards { gap: 6px; }
+  .card { min-height: 104px; padding: 5px; border-top-width: 3px; }
+  .card.empty-slot { min-height: 104px; }
+  .card-points { font-size: 15px; min-height: 15px; }
+  .card-bonus { font-size: 15px; }
+  .card-art { height: 40px; margin: -2px 0 2px; }
+  .card-sprite { width: 42px; height: 42px; }
+  .sprite-fallback { font-size: 26px; line-height: 40px; }
+  .card-name { font-size: 10px; min-height: 0; margin-bottom: 3px; }
+  .card-cost { gap: 3px; margin-bottom: 5px; }
+  .card-actions { flex-direction: row; gap: 4px; }
+  .mini { padding: 4px 2px; font-size: 11px; }
+  .card.facedown, .deck { min-height: 104px; }
+  .deck { width: 46px; }
+  .deck-tier { font-size: 15px; }
+
+  .bank { padding: 8px 10px; }
+  .bank-label { margin-bottom: 6px; }
+  .bank-tokens { gap: 8px; row-gap: 6px; justify-content: center; }
+  .token-lg { width: 36px; height: 36px; }
+  .token-lg .token-icon { font-size: 16px; }
+  .take2 { padding: 2px 8px; }
+  .take-bar { margin-top: 8px; padding-top: 8px; }
+
+  .players { gap: 6px; }
+  .player { padding: 6px 8px; }
+  .player-stats { margin: 6px 0; gap: 4px; }
+  .player-meta { gap: 8px; font-size: 11px; }
+  .log { padding: 8px 10px; }
+  .log-lines { max-height: 96px; }
+
+  /* Keep forced-decision modals within the short viewport. */
+  .modal { max-height: 92vh; overflow-y: auto; padding: 16px; }
+  .discard-grid { gap: 8px; margin-bottom: 12px; }
+
+  /* Compact chat controls. */
+  .chat-fab { width: 44px; height: 44px; font-size: 20px; right: 12px; bottom: 12px; }
+  .chat-panel { width: min(320px, 78vw); }
 }
