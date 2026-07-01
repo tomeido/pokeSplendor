@@ -67,7 +67,10 @@ export const NAME_TO_DEX: Record<string, number> = {
 
 export function spriteUrl(name: string): string | null {
   const id = NAME_TO_DEX[name];
-  return id ? `/sprites/${id}.png` : null;
+  // Resolve under the client's base URL so sprites load when the app is served
+  // from a reverse-proxy sub-path (e.g. /splendor/). BASE_URL is '/' at the root.
+  // (Client-only: the server never calls this, so import.meta.env stays untouched.)
+  return id ? `${import.meta.env.BASE_URL}sprites/${id}.png` : null;
 }
 
 // Per-type running counters so each card gets the next name from its pool.
