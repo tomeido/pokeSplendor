@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Action, Card, GemType, TokenType } from '../../shared/types.ts';
 import { GEM_TYPES } from '../../shared/types.ts';
 import type { ClientPlayer, ClientState } from '../../shared/engine.ts';
 import { GEM_THEME } from '../../shared/data.ts';
-import { CardView, Sprite, Token } from './bits.tsx';
+import { playSfx, type Sfx } from '../audio.ts';
+import { CardView, CostPip, Sprite, Token } from './bits.tsx';
 import { formatLog, localizeCard, localizeNoble, useLang } from '../i18n.tsx';
 
 const GEM_ORDER: GemType[] = ['white', 'blue', 'green', 'red', 'black'];
+
+// Which sound each action plays when you take it.
+const SFX_FOR: Record<Action['type'], Sfx> = {
+  TAKE_THREE: 'take', TAKE_TWO: 'take', RESERVE: 'reserve', BUY: 'buy',
+  DISCARD: 'click', CHOOSE_NOBLE: 'noble', PASS: 'click',
+};
 
 function canAffordClient(p: ClientPlayer, card: Card): boolean {
   let goldNeeded = 0;
@@ -15,6 +22,24 @@ function canAffordClient(p: ClientPlayer, card: Card): boolean {
     goldNeeded += need - Math.min(need, p.tokens[g]);
   }
   return goldNeeded <= p.tokens.gold;
+}
+
+/** What it takes to recruit `card` right now, from `p`'s point of view.
+ *  `pips` is the per-colour price after permanent bonuses (met = already covered by
+ *  held tokens); `need` is the total extra energy still to gather once gold (wild)
+ *  is applied — 0 exactly when the card is affordable. */
+function reservedNeed(p: ClientPlayer, card: Card): {
+  pips: { g: GemType; n: number; met: boolean }[];
+  need: number;
+} {
+  const pips: { g: GemType; n: number; met: boolean }[] = [];
+  let short = 0;
+  for (const g of GEM_ORDER) {
+    const n = Math.max(0, card.cost[g] - p.bonuses[g]); // price after permanent discounts
+    if (n > 0) pips.push({ g, n, met: p.tokens[g] >= n });
+    short += Math.max(0, n - p.tokens[g]); // colour tokens still missing (before gold)
+  }
+  return { pips, need: Math.max(0, short - p.tokens.gold) };
 }
 
 export function Game({
@@ -37,6 +62,23 @@ export function Game({
   useEffect(() => { setPicks([]); }, [state.current, state.turnCount]);
   useEffect(() => { setDiscard(emptyCounts()); }, [state.pendingDiscard, state.current]);
 
+  // Chime when it becomes your turn (rising edge only, not on every re-render).
+  const wasYourTurn = useRef(false);
+  useEffect(() => {
+    if (yourTurn && !wasYourTurn.current) playSfx('turn');
+    wasYourTurn.current = yourTurn;
+  }, [yourTurn]);
+
+  // Victory / defeat jingle once the game ends. Reset on a new game so a rematch
+  // (the component stays mounted) plays it again.
+  const endPlayed = useRef(false);
+  useEffect(() => {
+    if (state.status !== 'finished') { endPlayed.current = false; return; }
+    if (endPlayed.current) return;
+    endPlayed.current = true;
+    playSfx(state.winnerId === you.id ? 'win' : 'lose');
+  }, [state.status, state.winnerId, you.id]);
+
   const blocked = yourTurn && (state.pendingDiscard > 0 || state.pendingNobles.length > 0);
   const canAct = yourTurn && !blocked;
 
@@ -53,6 +95,7 @@ export function Game({
 
   function send(a: Action) {
     setPicks([]);
+    playSfx(SFX_FOR[a.type]);
     onAction(a);
   }
 
@@ -163,7 +206,6 @@ export function Game({
                 isHost={p.id === state.hostId}
                 canBuyReserved={p.isYou && canAct}
                 onBuyReserved={(cardId) => send({ type: 'BUY', cardId })}
-                affordReserved={(card) => canAffordClient(you, card)}
               />
             ))}
           </div>
@@ -192,7 +234,7 @@ export function Game({
           <button
             className="btn primary"
             disabled={discardTotal !== state.pendingDiscard}
-            onClick={() => onAction({ type: 'DISCARD', tokens: discard })}
+            onClick={() => send({ type: 'DISCARD', tokens: discard })}
           >
             {t('discard_btn', { a: discardTotal, b: state.pendingDiscard })}
           </button>
@@ -203,7 +245,7 @@ export function Game({
         <Modal title={t('noble_title')} subtitle={t('noble_sub')}>
           <div className="noble-choice">
             {state.pendingNobles.map((n) => (
-              <button key={n.id} className="noble-pick" onClick={() => onAction({ type: 'CHOOSE_NOBLE', nobleId: n.id })}>
+              <button key={n.id} className="noble-pick" onClick={() => send({ type: 'CHOOSE_NOBLE', nobleId: n.id })}>
                 <NobleView name={n.name} req={n.requirement} />
               </button>
             ))}
@@ -270,14 +312,13 @@ function NobleView({ name, req }: { name: string; req: Record<GemType, number> }
 }
 
 function PlayerPanel({
-  p, active, isHost, canBuyReserved, onBuyReserved, affordReserved,
+  p, active, isHost, canBuyReserved, onBuyReserved,
 }: {
   p: ClientPlayer;
   active: boolean;
   isHost: boolean;
   canBuyReserved: boolean;
   onBuyReserved: (cardId: string) => void;
-  affordReserved: (card: Card) => boolean;
 }) {
   const { lang, t } = useLang();
   const tokenTotal = (['white', 'blue', 'green', 'red', 'black', 'gold'] as TokenType[]).reduce(
@@ -314,23 +355,47 @@ function PlayerPanel({
             'hidden' in c ? (
               <div className="mini-card facedown" key={c.id} title={t('deck_title', { tier: c.tier })}>?</div>
             ) : (
-              <button
-                key={c.id}
-                className={`mini-card ${affordReserved(c) ? 'afford' : ''}`}
-                style={{ ['--bonus' as string]: GEM_THEME[c.bonus].color }}
-                disabled={!canBuyReserved || !affordReserved(c)}
-                onClick={() => onBuyReserved(c.id)}
-                title={localizeCard(lang, c.name)}
-              >
-                <span className="mc-pts">{c.points || ''}</span>
-                <Sprite name={c.name} bonus={c.bonus} className="mc-sprite" />
-                <span className="mc-name">{localizeCard(lang, c.name)}</span>
-              </button>
+              <ReservedCard key={c.id} card={c} p={p} canBuy={canBuyReserved} onBuy={onBuyReserved} />
             ),
           )}
         </div>
       )}
     </div>
+  );
+}
+
+/** A player's own reserved card, showing at a glance the energy still needed to recruit it. */
+function ReservedCard({
+  card, p, canBuy, onBuy,
+}: {
+  card: Card;
+  p: ClientPlayer;
+  canBuy: boolean;
+  onBuy: (cardId: string) => void;
+}) {
+  const { lang, t } = useLang();
+  const { pips, need } = reservedNeed(p, card);
+  const afford = need === 0;
+  return (
+    <button
+      className={`mini-card ${afford ? 'afford' : ''}`}
+      style={{ ['--bonus' as string]: GEM_THEME[card.bonus].color }}
+      disabled={!canBuy || !afford}
+      onClick={() => onBuy(card.id)}
+      title={afford ? t('reserved_ready', { name: localizeCard(lang, card.name) }) : t('reserved_need', { n: need })}
+    >
+      <span className="mc-pts">{card.points || ''}</span>
+      {afford
+        ? <span className="mc-need ready" aria-label={t('reserved_ready', { name: localizeCard(lang, card.name) })}>✓</span>
+        : <span className="mc-need">⚡{need}</span>}
+      <Sprite name={card.name} bonus={card.bonus} className="mc-sprite" />
+      <span className="mc-name">{localizeCard(lang, card.name)}</span>
+      <span className="mc-cost">
+        {pips.map(({ g, n, met }) => (
+          <CostPip key={g} gem={g} n={n} muted={met} />
+        ))}
+      </span>
+    </button>
   );
 }
 

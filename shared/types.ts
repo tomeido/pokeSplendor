@@ -87,6 +87,15 @@ export type Action =
   | { type: 'CHOOSE_NOBLE'; nobleId: string }
   | { type: 'PASS' }; // only legal when the player has no other move (avoids a hang)
 
+/** A single chat line, broadcast to everyone in a room. */
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  name: string;
+  text: string;
+  ts: number;
+}
+
 export const WINNING_SCORE = 15;
 export const MAX_TOKENS = 10;
 export const MAX_RESERVED = 3;

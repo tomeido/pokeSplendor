@@ -42,11 +42,12 @@ export function Token({
   );
 }
 
-/** A small coloured pip showing a single cost requirement. */
-function CostPip({ gem, n }: { gem: GemType; n: number }) {
+/** A small coloured pip showing a single cost requirement.
+ *  `muted` dims it to signal the requirement is already covered by held tokens. */
+export function CostPip({ gem, n, muted }: { gem: GemType; n: number; muted?: boolean }) {
   const th = GEM_THEME[gem];
   return (
-    <span className="pip" style={{ ['--tk' as string]: th.color }}>
+    <span className={`pip ${muted ? 'met' : ''}`} style={{ ['--tk' as string]: th.color }}>
       <span className="pip-icon">{th.icon}</span>
       <span className="pip-n">{n}</span>
     </span>

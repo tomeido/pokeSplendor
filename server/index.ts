@@ -1,15 +1,20 @@
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { Server } from 'socket.io';
-import type { Action, Player } from '../shared/types.ts';
+import type { Action, ChatMessage, Player } from '../shared/types.ts';
 import { aiChooseAction, applyAction, createGame, newPlayer, serializeFor } from '../shared/engine.ts';
 import type { GameState } from '../shared/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
 const isProd = process.env.NODE_ENV === 'production';
+// When served behind a reverse-proxy sub-path (e.g. /splendor), every URL the app
+// exposes — static assets, the SPA fallback, and the Socket.IO endpoint — must live
+// under it. Empty by default, so the app still serves from the root.
+const BASE_PATH = (process.env.BASE_PATH || '').replace(/\/+$/, '');
 
 interface Member { id: string; name: string; connected: boolean; socketId: string | null; isAI: boolean }
 interface Room {
@@ -18,15 +23,51 @@ interface Room {
   status: 'lobby' | 'playing' | 'finished';
   members: Map<string, Member>; // keyed by persistent playerId
   order: string[]; // seating order of playerIds
+  chat: ChatMessage[]; // recent chat lines (capped), replayed to (re)joiners
   game?: GameState;
 }
+
+const CHAT_HISTORY = 60; // lines kept per room and sent to a (re)joining client
+const CHAT_MAXLEN = 300; // max characters per message
+let chatSeq = 0; // makes message ids unique even within the same millisecond
 
 const rooms = new Map<string, Room>();
 const socketIndex = new Map<string, { roomId: string; playerId: string }>(); // socket.id -> location
 
+// ── Visitor stats ───────────────────────────────────────────────────────────
+// A simple hit counter, persisted to disk so it survives restarts. `pageViews`
+// counts every app load; `visitors` counts distinct browsers (the client reports
+// whether this is its first-ever visit, so we never store any per-user identifier).
+interface Stats { pageViews: number; visitors: number }
+const STATS_FILE = process.env.STATS_FILE || path.resolve(__dirname, '..', 'data', 'stats.json');
+
+function loadStats(): Stats {
+  try {
+    const s = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+    return { pageViews: Number(s.pageViews) || 0, visitors: Number(s.visitors) || 0 };
+  } catch { return { pageViews: 0, visitors: 0 }; }
+}
+const stats = loadStats();
+
+let statsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+function saveStats() {
+  if (statsSaveTimer) return; // debounce bursts of visits into a single write
+  statsSaveTimer = setTimeout(() => {
+    statsSaveTimer = null;
+    try {
+      fs.mkdirSync(path.dirname(STATS_FILE), { recursive: true });
+      fs.writeFileSync(STATS_FILE, JSON.stringify(stats));
+    } catch (e) { console.error('failed to save stats:', e); }
+  }, 1000);
+}
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { path: `${BASE_PATH}/socket.io`, cors: { origin: '*' } });
+
+// Read-only endpoint so the counts can be checked directly (must be registered
+// before the SPA catch-all fallback below).
+app.get(`${BASE_PATH}/api/stats`, (_req, res) => res.json(stats));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function lobbyPayload(room: Room) {
@@ -150,6 +191,19 @@ function maybeRunAI(room: Room) {
 
 // ── Socket handlers ──────────────────────────────────────────────────────
 io.on('connection', (socket) => {
+  // Send the current counts right away so the badge shows without waiting for a load event.
+  socket.emit('stats', stats);
+  // One page view per socket (guards against a flapping reconnect inflating the count).
+  let counted = false;
+  socket.on('pageview', ({ first }: { first?: boolean } = {}) => {
+    if (counted) return;
+    counted = true;
+    stats.pageViews++;
+    if (first) stats.visitors++;
+    saveStats();
+    io.emit('stats', stats);
+  });
+
   socket.on('join', ({ roomId, playerId, name }: { roomId: string; playerId: string; name: string }) => {
     roomId = String(roomId || '').toUpperCase().trim();
     name = String(name || '').slice(0, 16).trim() || 'Trainer';
@@ -157,7 +211,7 @@ io.on('connection', (socket) => {
 
     let room = rooms.get(roomId);
     if (!room) {
-      room = { id: roomId, hostId: playerId, status: 'lobby', members: new Map(), order: [] };
+      room = { id: roomId, hostId: playerId, status: 'lobby', members: new Map(), order: [], chat: [] };
       rooms.set(roomId, room);
     }
 
@@ -184,6 +238,7 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socketIndex.set(socket.id, { roomId, playerId });
     socket.emit('joined', { roomId, playerId, hostId: room.hostId });
+    socket.emit('chatHistory', room.chat); // replay recent chat to a fresh/reconnecting client
     broadcastRoom(room);
     maybeRunAI(room); // resume AI / re-arm grace for whoever's turn it is
   });
@@ -281,6 +336,31 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
+  // ── Chat ──────────────────────────────────────────────────────────────
+  // A short flood guard: drop messages sent faster than this from one socket.
+  let lastChatAt = 0;
+  socket.on('chat', ({ text }: { text?: string } = {}) => {
+    const loc = socketIndex.get(socket.id);
+    if (!loc) return;
+    const room = rooms.get(loc.roomId);
+    if (!room) return;
+    const member = room.members.get(loc.playerId);
+    if (!member) return;
+    // Collapse whitespace (so newlines can't break the layout) and cap the length.
+    const clean = String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, CHAT_MAXLEN);
+    if (!clean) return;
+    const now = Date.now();
+    if (now - lastChatAt < 400) return;
+    lastChatAt = now;
+    const msg: ChatMessage = {
+      id: `m${now.toString(36)}${(chatSeq++).toString(36)}`,
+      playerId: member.id, name: member.name, text: clean, ts: now,
+    };
+    room.chat.push(msg);
+    if (room.chat.length > CHAT_HISTORY) room.chat.shift();
+    io.to(room.id).emit('chatMsg', msg);
+  });
+
   socket.on('disconnect', () => {
     const loc = socketIndex.get(socket.id);
     if (!loc) return;
@@ -311,8 +391,11 @@ io.on('connection', (socket) => {
 // ── Static client in production ──────────────────────────────────────────
 if (isProd) {
   const dist = path.resolve(__dirname, '..', 'dist');
-  app.use(express.static(dist));
-  app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  app.use(BASE_PATH || '/', express.static(dist));
+  // SPA fallback for anything under the base path, plus the bare base itself
+  // (assets are referenced absolutely, so the bare path renders fine).
+  app.get(`${BASE_PATH}/*`, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  if (BASE_PATH) app.get(BASE_PATH, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 
 server.listen(PORT, () => {
