@@ -59,6 +59,26 @@ npx ngrok http 3001                 # share the printed https URL
 
 Disconnects are handled: rejoin with the same browser to resume your seat mid-game.
 
+## Mobile fullscreen
+
+On a phone in landscape, tap the four-corner icon in the top bar to enter or leave fullscreen.
+Android Chrome and Brave can hide their browser controls through the Fullscreen API. In-app browsers
+such as KakaoTalk may reject the request because their native toolbar is controlled by the host app;
+in that case, open the link in Chrome/Brave and either use the same button or add the game to the Home
+screen. The bundled web app manifest requests a fullscreen app window for an installed shortcut,
+with the exact system UI still determined by the device and browser.
+
+For iPhone KakaoTalk, first copy the link in the fullscreen guide, then use the bottom-right
+**Share → Open in Safari**. **Paste the copied link into Safari's address bar and navigate to it**
+to resume your game. Opening Safari from the native Share menu alone does not transfer your seat.
+When already in a room, the guide prepares a private, one-time move link (valid for five minutes).
+The receiving browser resumes the same seat, cards, score and host role automatically, even with
+different browser storage. Use **Copy move link** and paste it into Safari; do not rely on the native
+menu forwarding the move information. The old browser loses control; refreshes in the new browser use a
+private reconnect key. Existing Safari tabs also detect incoming fragment links and restart with a
+fresh connection before claiming the seat. Use the lobby's ordinary room link to invite friends,
+not the personal move link.
+
 ## How to play (each turn, pick ONE)
 
 | Action | What it does |
@@ -97,6 +117,19 @@ public/      sprites/ (bundled Pokémon images)
 ```bash
 npx tsx server/engine.test.ts     # rules engine unit checks
 npx tsx server/ai.test.ts         # AI plays only legal moves; AI-only games terminate
+npx tsx server/browser-transfer.test.ts # isolated server: cross-browser resume, expiry and replay protection
 npx tsx server/fuzz.ts 1000       # 1000 random full games, all invariants checked
 # live socket flow (server must be running): PORT=3001 npx tsx server/integration.test.ts
 ```
+
+With Playwright and its browsers installed, run the browser-transfer navigation regressions
+against an **isolated** production build served under `/splendor` (the tests create rooms):
+
+```bash
+TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=webkit node tests/browser-transfer-navigation.cjs
+TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/browser-transfer-navigation.cjs
+```
+
+`PLAYWRIGHT_PATH` can point to an external Playwright installation and `CHROMIUM_PATH` to a
+custom Chromium executable. These tests cover existing Safari tabs after a failed game join,
+already-joined lobby tabs, and a simulated BFCache restoration with a newly received link.

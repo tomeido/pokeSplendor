@@ -54,11 +54,21 @@ button:disabled { cursor: not-allowed; }
 .audio-toggle button { background: transparent; border: none; padding: 4px 9px; font-size: 14px; line-height: 1; filter: grayscale(1) opacity(.5); transition: .12s; }
 .audio-toggle button:hover { filter: grayscale(.4) opacity(.85); }
 .audio-toggle button.active { background: var(--panel2); filter: none; }
+.fullscreen-toggle {
+  width: 32px; height: 30px; padding: 6px; display: grid; place-items: center;
+  flex: 0 0 auto; color: var(--muted); background: var(--bg2);
+  border: 1px solid var(--line); border-radius: 8px; transition: .12s;
+}
+.fullscreen-toggle:hover { color: var(--text); border-color: var(--accent); }
+.fullscreen-toggle.active { color: #2a230a; background: var(--accent); border-color: var(--accent); }
+.fullscreen-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .visits {
   font-size: 12px; color: var(--muted); white-space: nowrap; cursor: default;
   padding: 3px 10px; border-radius: 999px; background: var(--bg2); border: 1px solid var(--line);
 }
-@media (max-width: 480px) { .visits { display: none; } }
+@media (max-width: 640px) {
+  .visits, .brand em { display: none; }
+}
 .conn { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
 .conn.on { background: rgba(87, 217, 119, .15); color: var(--good); }
 .conn.off { background: rgba(227, 53, 13, .15); color: #ff8a6e; }
@@ -289,6 +299,13 @@ button:disabled { cursor: not-allowed; }
 .modal { width: min(520px, 95vw); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); text-align: center; }
 .modal h2 { margin: 0 0 6px; }
 .modal-sub { color: var(--muted); margin: 0 0 16px; }
+.fullscreen-help { text-align: left; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; }
+.fullscreen-help p { color: var(--muted); line-height: 1.5; }
+.fullscreen-help .transfer-private { color: var(--accent); font-size: 13px; }
+.fullscreen-help > .btn.primary { display: block; margin-left: auto; }
+.fullscreen-share { margin: 18px 0; }
+.fullscreen-share input { min-width: 0; flex: 1; }
+.fullscreen-share .btn { flex-shrink: 0; }
 .discard-grid { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
 .discard-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .stepper { display: flex; align-items: center; gap: 8px; }
@@ -384,11 +401,15 @@ button:disabled { cursor: not-allowed; }
   .pip { padding: 1px 4px 1px 2px; font-size: 11px; }
   .room-code .code { font-size: 34px; letter-spacing: 5px; }
   /* Free up header room for the language + audio toggles on narrow phones. */
-  .brand em { display: none; }
   .topbar { padding: 10px 12px; }
   .topbar-right { gap: 8px; }
   /* Lift the toast above an open, near-full-width chat panel's input row. */
   .toast { bottom: 84px; }
+}
+/* On a narrow portrait phone, keep the already busy header clear. The control
+   appears as soon as the phone is rotated; while active it always remains visible. */
+@media (orientation: portrait) and (max-width: 480px) {
+  .fullscreen-toggle:not(.active) { display: none; }
 }
 
 /* ── Landscape phones: fit the whole game on one short, wide screen. The bank moves
@@ -397,11 +418,15 @@ button:disabled { cursor: not-allowed; }
    itself never scrolls. Placed last so it wins over the width-based rules above. ── */
 @media (orientation: landscape) and (max-height: 500px) {
   /* Lock scrolling to the viewport only on the game screen; home/lobby stay scrollable. */
-  .app:has(.game) { height: 100dvh; overflow: hidden; }
+  /* The explicit screen class also works on older in-app WebViews without :has(). */
+  .app-game { height: 100vh; height: 100dvh; overflow: hidden; }
   .topbar { position: static; padding: 3px 10px; }
   .brand { font-size: 13px; }
   .brand .ball { width: 13px; height: 13px; }
   .topbar-right { gap: 6px; }
+  .visits { display: none; }
+  .fullscreen-toggle { width: 28px; height: 26px; padding: 5px; }
+  .fullscreen-toggle svg { width: 16px; height: 16px; }
   .conn { padding: 2px 8px; font-size: 11px; }
 
   .game { flex: 1 1 auto; min-height: 0; padding: 4px 8px; display: flex; flex-direction: column; overflow: hidden; }

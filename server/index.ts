@@ -1,12 +1,14 @@
 import fs from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import { Server } from 'socket.io';
+import { Server, type Socket } from 'socket.io';
 import type { Action, ChatMessage, Player } from '../shared/types.ts';
 import { aiChooseAction, applyAction, createGame, newPlayer, serializeFor } from '../shared/engine.ts';
 import type { GameState } from '../shared/types.ts';
+import type { BrowserTransferResult, BrowserTransferTicket } from '../shared/browser-transfer.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -16,7 +18,15 @@ const isProd = process.env.NODE_ENV === 'production';
 // under it. Empty by default, so the app still serves from the root.
 const BASE_PATH = (process.env.BASE_PATH || '').replace(/\/+$/, '');
 
-interface Member { id: string; name: string; connected: boolean; socketId: string | null; isAI: boolean }
+interface Member {
+  id: string;
+  name: string;
+  connected: boolean;
+  socketId: string | null;
+  isAI: boolean;
+  resumeKey?: string;
+  transferToken?: string;
+}
 interface Room {
   id: string;
   hostId: string;
@@ -33,6 +43,35 @@ let chatSeq = 0; // makes message ids unique even within the same millisecond
 
 const rooms = new Map<string, Room>();
 const socketIndex = new Map<string, { roomId: string; playerId: string }>(); // socket.id -> location
+
+// Only one ticket (including its retry record) is retained per seat. A claim ID
+// stays private to the destination browser; the URL itself works only once.
+const BROWSER_TRANSFER_TTL_MS = Math.max(100, Math.min(
+  Number(process.env.BROWSER_TRANSFER_TTL_MS) || 5 * 60 * 1000, 5 * 60 * 1000,
+));
+interface BrowserTransfer {
+  room: Room;
+  member: Member;
+  expiresAt: number;
+  timer: ReturnType<typeof setTimeout>;
+  claimId?: string;
+  resumeKey?: string;
+}
+const browserTransfers = new Map<string, BrowserTransfer>();
+
+function forgetBrowserTransfer(member: Member) {
+  if (!member.transferToken) return;
+  const transfer = browserTransfers.get(member.transferToken);
+  if (transfer) clearTimeout(transfer.timer);
+  browserTransfers.delete(member.transferToken);
+  member.transferToken = undefined;
+}
+
+function currentBrowserTransfer(member: Member): BrowserTransfer | undefined {
+  const transfer = member.transferToken ? browserTransfers.get(member.transferToken) : undefined;
+  return transfer && transfer.member === member && transfer.expiresAt > Date.now()
+    && (!transfer.claimId || transfer.resumeKey === member.resumeKey) ? transfer : undefined;
+}
 
 // ── Visitor stats ───────────────────────────────────────────────────────────
 // A simple hit counter, persisted to disk so it survives restarts. `pageViews`
@@ -141,12 +180,33 @@ function cancelRoomCleanup(roomId: string) {
 }
 function scheduleRoomCleanup(room: Room) {
   if (roomCleanup.has(room.id) || hasConnectedHuman(room)) return;
+  const transferExpiry = Math.max(0, ...Array.from(room.members.values(),
+    (member) => currentBrowserTransfer(member)?.expiresAt ?? 0));
   const t = setTimeout(() => {
     roomCleanup.delete(room.id);
     const r = rooms.get(room.id);
-    if (r && !hasConnectedHuman(r)) { clearAITimer(r.id); rooms.delete(r.id); }
-  }, ROOM_GRACE_MS);
+    if (r === room && !hasConnectedHuman(r)) deleteRoom(r);
+  }, Math.max(ROOM_GRACE_MS, transferExpiry - Date.now()));
   roomCleanup.set(room.id, t);
+}
+
+function deleteRoom(room: Room) {
+  cancelRoomCleanup(room.id);
+  clearAITimer(room.id);
+  for (const member of room.members.values()) forgetBrowserTransfer(member);
+  if (rooms.get(room.id) === room) rooms.delete(room.id);
+}
+
+function removeDisconnectedLobbyMember(room: Room, member: Member) {
+  if (rooms.get(room.id) !== room || room.status !== 'lobby'
+    || room.members.get(member.id) !== member || member.connected) return;
+  forgetBrowserTransfer(member);
+  room.members.delete(member.id);
+  room.order = room.order.filter((pid) => pid !== member.id);
+  const humans = room.order.filter((pid) => !room.members.get(pid)!.isAI);
+  if (humans.length === 0) { deleteRoom(room); return; }
+  if (room.hostId === member.id) room.hostId = humans[0];
+  broadcastRoom(room);
 }
 // A disconnected human on their turn would otherwise freeze the table (AIs can't
 // move — not their turn; other humans can't act — not their turn). After this grace
@@ -189,6 +249,35 @@ function maybeRunAI(room: Room) {
   aiTimers.set(room.id, timer);
 }
 
+/** Attach exactly one socket to a seat, keeping turn, private cards and host ID. */
+function bindMember(socket: Socket, room: Room, member: Member) {
+  const previousSocketId = member.socketId;
+  member.connected = true;
+  member.socketId = socket.id;
+  if (previousSocketId && previousSocketId !== socket.id) {
+    // Revoke commands and room broadcasts before disconnect triggers its handler.
+    socketIndex.delete(previousSocketId);
+    const previousSocket = io.sockets.sockets.get(previousSocketId);
+    previousSocket?.leave(room.id);
+    previousSocket?.emit('sessionMoved');
+    previousSocket?.disconnect(true);
+  }
+  cancelRoomCleanup(room.id);
+  // A bystander's reconnect must not restart the current absent player's clock.
+  if (room.game && room.status === 'playing' && room.game.players[room.game.current].id === member.id) {
+    clearAITimer(room.id);
+  }
+  socket.join(room.id);
+  socketIndex.set(socket.id, { roomId: room.id, playerId: member.id });
+  socket.emit('joined', {
+    roomId: room.id, playerId: member.id, hostId: room.hostId,
+    name: member.name, ...(member.resumeKey ? { resumeKey: member.resumeKey } : {}),
+  });
+  socket.emit('chatHistory', room.chat);
+  broadcastRoom(room);
+  maybeRunAI(room);
+}
+
 // ── Socket handlers ──────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   // Send the current counts right away so the badge shows without waiting for a load event.
@@ -204,7 +293,9 @@ io.on('connection', (socket) => {
     io.emit('stats', stats);
   });
 
-  socket.on('join', ({ roomId, playerId, name }: { roomId: string; playerId: string; name: string }) => {
+  socket.on('join', ({ roomId, playerId, name, resumeKey }: {
+    roomId: string; playerId: string; name: string; resumeKey?: string;
+  }) => {
     roomId = String(roomId || '').toUpperCase().trim();
     name = String(name || '').slice(0, 16).trim() || 'Trainer';
     if (!roomId || !playerId) { emitError(socket.id, 'Missing room or player id.'); return; }
@@ -217,9 +308,14 @@ io.on('connection', (socket) => {
 
     const existing = room.members.get(playerId);
     if (existing) {
+      if (existing.resumeKey && existing.resumeKey !== resumeKey) {
+        // A suspended source may have missed the notification sent at transfer.
+        socket.emit('sessionMoved');
+        emitError(socket.id, 'This seat has moved to another browser.');
+        socket.disconnect(true);
+        return;
+      }
       // Reconnect to an existing seat.
-      existing.connected = true;
-      existing.socketId = socket.id;
       existing.name = name;
     } else {
       if (room.status !== 'lobby') { emitError(socket.id, 'That game has already started.'); return; }
@@ -228,19 +324,75 @@ io.on('connection', (socket) => {
       room.order.push(playerId);
     }
 
-    cancelRoomCleanup(roomId); // a human is present again
-    // Only the absent CURRENT seat returning should cancel the auto-play grace —
-    // another player's reconnect must not restart someone else's clock (that would
-    // let a flapping bystander defer the auto-play indefinitely and re-freeze the table).
-    if (room.game && room.status === 'playing' && room.game.players[room.game.current].id === playerId) {
-      clearAITimer(roomId);
+    bindMember(socket, room, room.members.get(playerId)!);
+  });
+
+  socket.on('createBrowserTransfer', (_payload: unknown, reply?: (result: BrowserTransferTicket) => void) => {
+    if (typeof reply !== 'function') return;
+    const loc = socketIndex.get(socket.id);
+    const room = loc && rooms.get(loc.roomId);
+    const member = room && loc && room.members.get(loc.playerId);
+    if (!room || !member || member.isAI || !member.connected || member.socketId !== socket.id) {
+      reply({ ok: false, error: 'not_joined' }); return;
     }
-    socket.join(roomId);
-    socketIndex.set(socket.id, { roomId, playerId });
-    socket.emit('joined', { roomId, playerId, hostId: room.hostId });
-    socket.emit('chatHistory', room.chat); // replay recent chat to a fresh/reconnecting client
-    broadcastRoom(room);
-    maybeRunAI(room); // resume AI / re-arm grace for whoever's turn it is
+    forgetBrowserTransfer(member);
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = Date.now() + BROWSER_TRANSFER_TTL_MS;
+    const timer = setTimeout(() => {
+      // A later ticket must never be invalidated by this one's expired timer.
+      if (member.transferToken !== token) return;
+      forgetBrowserTransfer(member);
+      removeDisconnectedLobbyMember(room, member);
+    }, BROWSER_TRANSFER_TTL_MS);
+    browserTransfers.set(token, { room, member, expiresAt, timer });
+    member.transferToken = token;
+    reply({ ok: true, token, expiresAt });
+  });
+
+  socket.on('cancelBrowserTransfer', (_payload: unknown, reply?: () => void) => {
+    const loc = socketIndex.get(socket.id);
+    const room = loc && rooms.get(loc.roomId);
+    const member = room && loc && room.members.get(loc.playerId);
+    if (member?.socketId === socket.id) forgetBrowserTransfer(member);
+    if (typeof reply === 'function') reply();
+  });
+
+  socket.on('resumeBrowserTransfer', (
+    payload: { token?: unknown; claimId?: unknown } | null,
+    reply?: (result: BrowserTransferResult) => void,
+  ) => {
+    if (typeof reply !== 'function') return;
+    const token = payload?.token;
+    const claimId = payload?.claimId;
+    if (typeof token !== 'string' || token.length > 200
+      || typeof claimId !== 'string' || claimId.length < 16 || claimId.length > 200) {
+      reply({ ok: false, error: 'invalid_transfer' }); return;
+    }
+    const transfer = browserTransfers.get(token);
+    if (!transfer || transfer.expiresAt <= Date.now()
+      || rooms.get(transfer.room.id) !== transfer.room
+      || transfer.room.members.get(transfer.member.id) !== transfer.member
+      || transfer.member.transferToken !== token
+      || (transfer.claimId && (transfer.claimId !== claimId || transfer.resumeKey !== transfer.member.resumeKey))) {
+      reply({ ok: false, error: 'invalid_transfer' }); return;
+    }
+    const { room, member } = transfer;
+    const loc = socketIndex.get(socket.id);
+    if (loc && (loc.roomId !== room.id || loc.playerId !== member.id)) {
+      reply({ ok: false, error: 'already_joined' }); return;
+    }
+    // Commit the one-time claim before attaching or replying. Only this browser's
+    // private claim ID can retry a lost acknowledgement until the ticket expires.
+    if (!transfer.claimId) {
+      transfer.claimId = claimId;
+      transfer.resumeKey = randomBytes(32).toString('base64url');
+      member.resumeKey = transfer.resumeKey;
+    }
+    bindMember(socket, room, member);
+    reply({
+      ok: true, roomId: room.id, playerId: member.id,
+      name: member.name, resumeKey: transfer.resumeKey!,
+    });
   });
 
   socket.on('addAI', () => {
@@ -368,15 +520,14 @@ io.on('connection', (socket) => {
     const room = rooms.get(loc.roomId);
     if (!room) return;
     const m = room.members.get(loc.playerId);
-    if (m && m.socketId === socket.id) { m.connected = false; m.socketId = null; }
+    if (!m || m.socketId !== socket.id) return;
+    m.connected = false;
+    m.socketId = null;
 
     if (room.status === 'lobby') {
-      // Drop disconnected humans from a lobby that hasn't started.
-      room.members.delete(loc.playerId);
-      room.order = room.order.filter((pid) => pid !== loc.playerId);
-      const humans = room.order.filter((pid) => !room.members.get(pid)!.isAI);
-      if (humans.length === 0) { clearAITimer(room.id); rooms.delete(room.id); return; }
-      if (room.hostId === loc.playerId) room.hostId = humans[0];
+      // Switching browsers may close Kakao before Safari connects. Reserve this
+      // lobby seat (and its host role) until the outstanding transfer expires.
+      if (!currentBrowserTransfer(m)) { removeDisconnectedLobbyMember(room, m); return; }
     } else if (!hasConnectedHuman(room)) {
       // Game in progress/finished but everyone left — clean up after a grace period.
       scheduleRoomCleanup(room);

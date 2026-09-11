@@ -11,6 +11,7 @@
     "build": "vite build",
     "start": "cross-env NODE_ENV=production tsx server/index.ts",
     "sprites": "tsx server/fetch-sprites.ts",
+    "icons": "tsx server/generate-app-icons.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

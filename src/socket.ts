@@ -9,6 +9,7 @@ export const socket: Socket = io({ autoConnect: false, path: `${import.meta.env.
 const PID_KEY = 'poke-splendor-pid';
 const NAME_KEY = 'poke-splendor-name';
 const VISIT_KEY = 'poke-splendor-visited';
+const ROOM_KEY = 'poke-splendor-room';
 
 /** True the first time this browser ever loads the app; false on every later visit.
  *  Lets the server count unique visitors without storing any per-user identifier. */
@@ -35,4 +36,28 @@ export function getSavedName(): string {
 
 export function saveName(name: string): void {
   localStorage.setItem(NAME_KEY, name);
+}
+
+export function savePlayerId(playerId: string): void {
+  localStorage.setItem(PID_KEY, playerId);
+}
+
+export function getResumeKey(roomId: string): string | undefined {
+  return localStorage.getItem(`poke-splendor-resume:${roomId}`) || undefined;
+}
+
+export function saveResumeKey(roomId: string, key: string): void {
+  localStorage.setItem(`poke-splendor-resume:${roomId}`, key);
+}
+
+export function getSavedRoom(): string {
+  return localStorage.getItem(ROOM_KEY) || '';
+}
+
+export function saveRoom(roomId: string): void {
+  localStorage.setItem(ROOM_KEY, roomId);
+}
+
+export function clearSavedRoom(): void {
+  localStorage.removeItem(ROOM_KEY);
 }
