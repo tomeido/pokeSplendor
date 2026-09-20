@@ -235,6 +235,7 @@ button:disabled { cursor: not-allowed; }
 .bank-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .take2 { font-size: 12px; font-weight: 800; border-radius: 7px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); padding: 3px 10px; }
 .take2:hover:not(:disabled) { border-color: var(--accent); }
+.take2[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--bg); }
 .take2:disabled { opacity: .35; }
 .gold-col .gold-note { font-size: 10px; color: var(--muted); }
 .take-bar { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }

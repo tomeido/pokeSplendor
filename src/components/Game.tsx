@@ -56,10 +56,14 @@ export function Game({
   const current = state.players[state.current];
 
   const [picks, setPicks] = useState<GemType[]>([]);
+  const [doublePick, setDoublePick] = useState<GemType | null>(null);
   const [discard, setDiscard] = useState<Record<TokenType, number>>(emptyCounts());
 
   // Reset transient selections whenever the turn or phase changes.
-  useEffect(() => { setPicks([]); }, [state.current, state.turnCount]);
+  useEffect(() => {
+    setPicks([]);
+    setDoublePick(null);
+  }, [state.current, state.turnCount, state.status, state.pendingDiscard, state.pendingNobles.length]);
   useEffect(() => { setDiscard(emptyCounts()); }, [state.pendingDiscard, state.current]);
 
   // Chime when it becomes your turn (rising edge only, not on every re-render).
@@ -85,16 +89,34 @@ export function Game({
   const availableColors = GEM_ORDER.filter((g) => state.bank[g] > 0);
   const takeThreeValid =
     picks.length > 0 && (picks.length === 3 || picks.length === availableColors.length);
+  const takeTwoValid = doublePick !== null && state.bank[doublePick] >= 4;
 
   function togglePick(g: GemType) {
     if (!canAct) return;
+    setDoublePick(null);
     setPicks((prev) =>
       prev.includes(g) ? prev.filter((x) => x !== g) : prev.length >= 3 ? prev : [...prev, g],
     );
   }
 
+  function toggleDoublePick(g: GemType) {
+    if (!canAct || state.bank[g] < 4) return;
+    setPicks([]);
+    setDoublePick((prev) => prev === g ? null : g);
+  }
+
+  function takeEnergy() {
+    if (!canAct) return;
+    if (doublePick !== null) {
+      if (takeTwoValid) send({ type: 'TAKE_TWO', gem: doublePick });
+    } else if (takeThreeValid) {
+      send({ type: 'TAKE_THREE', gems: picks });
+    }
+  }
+
   function send(a: Action) {
     setPicks([]);
+    setDoublePick(null);
     playSfx(SFX_FOR[a.type]);
     onAction(a);
   }
@@ -153,15 +175,16 @@ export function Game({
                     type={g}
                     count={state.bank[g]}
                     size="lg"
-                    selected={picks.includes(g)}
+                    selected={picks.includes(g) || doublePick === g}
                     dim={state.bank[g] === 0}
                     onClick={canAct && state.bank[g] > 0 ? () => togglePick(g) : undefined}
                     title={t('gem_' + g)}
                   />
                   <button
                     className="take2"
+                    aria-pressed={doublePick === g}
                     disabled={!canAct || state.bank[g] < 4}
-                    onClick={() => send({ type: 'TAKE_TWO', gem: g })}
+                    onClick={() => toggleDoublePick(g)}
                     title={t('bank_take2title')}
                   >
                     +2
@@ -176,13 +199,15 @@ export function Game({
 
             <div className="take-bar">
               <div className="picks">
-                {picks.length === 0 ? (
+                {doublePick !== null ? (
+                  <Token type={doublePick} count={2} size="sm" onClick={() => toggleDoublePick(doublePick)} title={t('gem_' + doublePick)} />
+                ) : picks.length === 0 ? (
                   <span className="picks-hint">{canAct ? t('bank_pickHint') : ''}</span>
                 ) : (
                   picks.map((g) => <Token key={g} type={g} size="sm" onClick={() => togglePick(g)} />)
                 )}
               </div>
-              <button className="btn primary" disabled={!canAct || !takeThreeValid} onClick={() => send({ type: 'TAKE_THREE', gems: picks })}>
+              <button className="btn primary" disabled={!canAct || !(doublePick !== null ? takeTwoValid : takeThreeValid)} onClick={takeEnergy}>
                 {t('bank_take')}
               </button>
             </div>
