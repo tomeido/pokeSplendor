@@ -84,7 +84,7 @@ not the personal move link.
 | Action | What it does |
 | --- | --- |
 | **Take 3 energy** | Click up to 3 *different* energy tokens, then **Take energy**. |
-| **Take 2 energy** | Press **+2** under a type (needs 4+ in the bank). |
+| **Take 2 energy** | Select **+2** under a type (needs 4+ in the bank), then **Take energy** to confirm. Press **+2** again to cancel. |
 | **Reserve** | Reserve a face-up card or a face-down deck top (**+1 ⚡ wild**). Max 3 reserved. |
 | **Recruit** | Buy a card you can afford (board or reserved). Gives a permanent discount + points. |
 
@@ -122,14 +122,18 @@ npx tsx server/fuzz.ts 1000       # 1000 random full games, all invariants check
 # live socket flow (server must be running): PORT=3001 npx tsx server/integration.test.ts
 ```
 
-With Playwright and its browsers installed, run the browser-transfer navigation regressions
+With Playwright and its browsers installed, run the browser regressions
 against an **isolated** production build served under `/splendor` (the tests create rooms):
 
 ```bash
 TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=webkit node tests/browser-transfer-navigation.cjs
 TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/browser-transfer-navigation.cjs
+TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/energy-confirmation.cjs
 ```
 
 `PLAYWRIGHT_PATH` can point to an external Playwright installation and `CHROMIUM_PATH` to a
-custom Chromium executable. These tests cover existing Safari tabs after a failed game join,
+custom Chromium executable. The transfer tests cover existing Safari tabs after a failed game join,
 already-joined lobby tabs, and a simulated BFCache restoration with a newly received link.
+The energy confirmation test runs desktop clicks and mobile touches with two human players,
+checking that selecting, canceling, or changing **+2** sends no move; only **Take energy**
+collects the tokens. It also checks ordinary three-energy confirmation and turn/bank limits.
