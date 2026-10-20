@@ -11,33 +11,90 @@ export const GEM_THEME: Record<GemType, { label: string; icon: string; color: st
 };
 export const GOLD_THEME = { label: 'Electric', icon: '⚡', color: '#f4c430' };
 
-// Type-matched Pokémon pools, with Kanto and Johto at the heart of the roster.
+// All 251 Kanto / Johto species, plus later favourites, grouped by related types.
 // Each species belongs to one pool so a game can draw 90 different Pokémon.
 export const POKEMON: Record<GemType, [string[], string[], string[]]> = {
   white: [
-    ['Igglybuff', 'Cleffa', 'Snubbull', 'Togepi', 'Marill', 'Ralts', 'Spritzee', 'Flabébé', 'Swirlix', 'Cutiefly'],
-    ['Jigglypuff', 'Clefairy', 'Granbull', 'Togetic', 'Azumarill', 'Mr. Mime', 'Kirlia', 'Aromatisse', 'Floette', 'Slurpuff', 'Ribombee'],
-    ['Wigglytuff', 'Clefable', 'Gardevoir', 'Sylveon', 'Togekiss', 'Florges'],
+    [
+      'Pidgey', 'Rattata', 'Spearow', 'Meowth', 'Abra', 'Doduo', 'Drowzee', 'Eevee',
+      'Porygon', 'Sentret', 'Hoothoot', 'Cleffa', 'Igglybuff', 'Togepi', 'Natu', 'Marill',
+      'Aipom', 'Unown', 'Dunsparce', 'Snubbull', 'Teddiursa', 'Ralts', 'Flabébé', 'Spritzee',
+      'Swirlix', 'Cutiefly',
+    ],
+    [
+      'Pidgeotto', 'Raticate', 'Fearow', 'Clefairy', 'Jigglypuff', 'Persian', 'Kadabra', 'Farfetch’d',
+      'Dodrio', 'Hypno', 'Lickitung', 'Chansey', 'Mr. Mime', 'Ditto', 'Furret', 'Noctowl',
+      'Togetic', 'Xatu', 'Azumarill', 'Wobbuffet', 'Girafarig', 'Granbull', 'Ursaring', 'Porygon2',
+      'Stantler', 'Smeargle', 'Miltank', 'Kirlia', 'Floette', 'Aromatisse', 'Slurpuff', 'Ribombee',
+    ],
+    [
+      'Pidgeot', 'Clefable', 'Wigglytuff', 'Alakazam', 'Kangaskhan', 'Tauros', 'Snorlax', 'Mewtwo',
+      'Mew', 'Espeon', 'Blissey', 'Lugia', 'Gardevoir', 'Togekiss', 'Florges', 'Sylveon',
+    ],
   ],
   blue: [
-    ['Squirtle', 'Magikarp', 'Psyduck', 'Poliwag', 'Horsea', 'Staryu', 'Tentacool', 'Krabby', 'Totodile', 'Wooper', 'Chinchou', 'Goldeen', 'Slowpoke', 'Seel', 'Shellder', 'Remoraid'],
-    ['Wartortle', 'Golduck', 'Poliwhirl', 'Seadra', 'Croconaw', 'Quagsire', 'Seaking', 'Dewgong', 'Cloyster', 'Octillery', 'Lanturn'],
-    ['Blastoise', 'Gyarados', 'Vaporeon', 'Lapras', 'Kingdra', 'Feraligatr', 'Poliwrath', 'Politoed', 'Starmie', 'Tentacruel', 'Kingler', 'Slowbro', 'Slowking', 'Suicune'],
+    [
+      'Squirtle', 'Psyduck', 'Poliwag', 'Tentacool', 'Slowpoke', 'Seel', 'Shellder', 'Krabby',
+      'Horsea', 'Goldeen', 'Staryu', 'Magikarp', 'Omanyte', 'Kabuto', 'Totodile', 'Chinchou',
+      'Wooper', 'Swinub', 'Remoraid', 'Smoochum',
+    ],
+    [
+      'Wartortle', 'Golduck', 'Poliwhirl', 'Dewgong', 'Cloyster', 'Seadra', 'Seaking', 'Jynx',
+      'Omastar', 'Kabutops', 'Croconaw', 'Lanturn', 'Quagsire', 'Qwilfish', 'Piloswine', 'Corsola',
+      'Octillery', 'Delibird', 'Mantine',
+    ],
+    [
+      'Blastoise', 'Poliwrath', 'Tentacruel', 'Slowbro', 'Kingler', 'Starmie', 'Gyarados', 'Lapras',
+      'Vaporeon', 'Articuno', 'Feraligatr', 'Politoed', 'Slowking', 'Kingdra', 'Suicune',
+    ],
   ],
   green: [
-    ['Bulbasaur', 'Oddish', 'Bellsprout', 'Chikorita', 'Hoppip', 'Sunkern', 'Exeggcute', 'Paras'],
-    ['Ivysaur', 'Gloom', 'Weepinbell', 'Bayleef', 'Skiploom', 'Sunflora', 'Parasect', 'Tangela'],
-    ['Venusaur', 'Vileplume', 'Victreebel', 'Meganium', 'Bellossom', 'Jumpluff', 'Exeggutor', 'Celebi'],
+    [
+      'Bulbasaur', 'Caterpie', 'Weedle', 'Ekans', 'Nidoran♀', 'Nidoran♂', 'Zubat', 'Oddish',
+      'Paras', 'Venonat', 'Bellsprout', 'Grimer', 'Exeggcute', 'Koffing', 'Chikorita', 'Ledyba',
+      'Spinarak', 'Hoppip', 'Sunkern', 'Pineco',
+    ],
+    [
+      'Ivysaur', 'Metapod', 'Kakuna', 'Arbok', 'Nidorina', 'Nidorino', 'Golbat', 'Gloom',
+      'Parasect', 'Venomoth', 'Weepinbell', 'Muk', 'Weezing', 'Tangela', 'Scyther', 'Pinsir',
+      'Bayleef', 'Ledian', 'Ariados', 'Skiploom', 'Sunflora', 'Yanma', 'Shuckle',
+    ],
+    [
+      'Venusaur', 'Butterfree', 'Beedrill', 'Nidoqueen', 'Nidoking', 'Vileplume', 'Victreebel', 'Exeggutor',
+      'Meganium', 'Crobat', 'Bellossom', 'Jumpluff', 'Forretress', 'Scizor', 'Heracross', 'Celebi',
+    ],
   ],
   red: [
-    ['Charmander', 'Vulpix', 'Growlithe', 'Ponyta', 'Cyndaquil', 'Slugma', 'Magby', 'Torchic', 'Litwick'],
-    ['Charmeleon', 'Ninetales', 'Arcanine', 'Rapidash', 'Quilava', 'Magmar', 'Magcargo'],
-    ['Charizard', 'Flareon', 'Typhlosion', 'Moltres', 'Entei', 'Ho-Oh'],
+    [
+      'Charmander', 'Vulpix', 'Mankey', 'Growlithe', 'Machop', 'Ponyta', 'Magnemite', 'Voltorb',
+      'Cyndaquil', 'Pichu', 'Mareep', 'Slugma', 'Tyrogue', 'Elekid', 'Magby', 'Torchic',
+      'Litwick',
+    ],
+    [
+      'Charmeleon', 'Pikachu', 'Ninetales', 'Primeape', 'Arcanine', 'Machoke', 'Rapidash', 'Magneton',
+      'Electrode', 'Hitmonlee', 'Hitmonchan', 'Electabuzz', 'Magmar', 'Quilava', 'Flaaffy', 'Magcargo',
+      'Hitmontop',
+    ],
+    [
+      'Charizard', 'Raichu', 'Machamp', 'Jolteon', 'Flareon', 'Zapdos', 'Moltres', 'Typhlosion',
+      'Ampharos', 'Raikou', 'Entei', 'Ho-Oh',
+    ],
   ],
   black: [
-    ['Houndour', 'Sneasel', 'Murkrow', 'Poochyena', 'Zorua', 'Purrloin', 'Nickit', 'Impidimp', 'Deino', 'Pawniard', 'Sandile', 'Scraggy', 'Inkay'],
-    ['Houndoom', 'Mightyena', 'Weavile', 'Honchkrow', 'Zoroark', 'Liepard', 'Bisharp', 'Krookodile', 'Scrafty', 'Malamar'],
-    ['Tyranitar', 'Umbreon', 'Absol', 'Hydreigon', 'Darkrai', 'Yveltal'],
+    [
+      'Sandshrew', 'Diglett', 'Geodude', 'Gastly', 'Cubone', 'Rhyhorn', 'Dratini', 'Murkrow',
+      'Misdreavus', 'Gligar', 'Sneasel', 'Houndour', 'Phanpy', 'Larvitar', 'Poochyena', 'Purrloin',
+      'Sandile', 'Scraggy', 'Zorua', 'Pawniard', 'Deino', 'Inkay', 'Nickit', 'Impidimp',
+    ],
+    [
+      'Sandslash', 'Dugtrio', 'Graveler', 'Haunter', 'Onix', 'Marowak', 'Rhydon', 'Dragonair',
+      'Sudowoodo', 'Houndoom', 'Donphan', 'Pupitar', 'Mightyena', 'Honchkrow', 'Weavile', 'Liepard',
+      'Krookodile', 'Scrafty', 'Zoroark', 'Bisharp', 'Malamar',
+    ],
+    [
+      'Golem', 'Gengar', 'Aerodactyl', 'Dragonite', 'Umbreon', 'Steelix', 'Skarmory', 'Tyranitar',
+      'Absol', 'Darkrai', 'Hydreigon', 'Yveltal',
+    ],
   ],
 };
 
@@ -72,10 +129,46 @@ export const NAME_TO_DEX: Record<string, number> = {
   Exeggcute: 102, Paras: 46, Skiploom: 188, Sunflora: 192, Parasect: 47, Tangela: 114,
   Meganium: 154, Bellossom: 182, Jumpluff: 189, Exeggutor: 103, Celebi: 251,
   Magby: 240, Magmar: 126, Magcargo: 219, Moltres: 146, Entei: 244, 'Ho-Oh': 250,
-  // Later generations round out Fairy and Dark, which have smaller early rosters.
+  // Later-generation Fairy and Dark favourites.
   Floette: 670, Slurpuff: 685, Ribombee: 743, Togekiss: 468, Florges: 671,
   Deino: 633, Pawniard: 624, Sandile: 551, Scraggy: 559, Inkay: 686,
   Liepard: 510, Bisharp: 625, Krookodile: 553, Scrafty: 560, Malamar: 687, Darkrai: 491, Yveltal: 717,
+  // Normal, Psychic and Flying (white) — remaining Kanto / Johto species.
+  Pidgey: 16, Pidgeotto: 17, Pidgeot: 18, Rattata: 19, Raticate: 20,
+  Spearow: 21, Fearow: 22, Meowth: 52, Persian: 53, Abra: 63,
+  Kadabra: 64, Alakazam: 65, 'Farfetch’d': 83, Doduo: 84, Dodrio: 85,
+  Drowzee: 96, Hypno: 97, Lickitung: 108, Chansey: 113, Kangaskhan: 115,
+  Tauros: 128, Ditto: 132, Eevee: 133, Porygon: 137, Snorlax: 143,
+  Mewtwo: 150, Mew: 151, Sentret: 161, Furret: 162, Hoothoot: 163,
+  Noctowl: 164, Natu: 177, Xatu: 178, Aipom: 190, Espeon: 196,
+  Unown: 201, Wobbuffet: 202, Girafarig: 203, Dunsparce: 206, Teddiursa: 216,
+  Ursaring: 217, Porygon2: 233, Stantler: 234, Smeargle: 235, Miltank: 241,
+  Blissey: 242, Lugia: 249,
+  // Water and Ice (blue) — remaining Kanto / Johto species.
+  Jynx: 124, Omanyte: 138, Omastar: 139, Kabuto: 140, Kabutops: 141,
+  Articuno: 144, Qwilfish: 211, Swinub: 220, Piloswine: 221, Corsola: 222,
+  Delibird: 225, Mantine: 226, Smoochum: 238,
+  // Bug and Poison (green) — remaining Kanto / Johto species.
+  Caterpie: 10, Metapod: 11, Butterfree: 12, Weedle: 13, Kakuna: 14,
+  Beedrill: 15, Ekans: 23, Arbok: 24, 'Nidoran♀': 29, Nidorina: 30,
+  Nidoqueen: 31, 'Nidoran♂': 32, Nidorino: 33, Nidoking: 34, Zubat: 41,
+  Golbat: 42, Venonat: 48, Venomoth: 49, Grimer: 88, Muk: 89,
+  Koffing: 109, Weezing: 110, Scyther: 123, Pinsir: 127, Ledyba: 165,
+  Ledian: 166, Spinarak: 167, Ariados: 168, Crobat: 169, Yanma: 193,
+  Pineco: 204, Forretress: 205, Scizor: 212, Shuckle: 213, Heracross: 214,
+  // Electric and Fighting (red) — remaining Kanto / Johto species.
+  Pikachu: 25, Raichu: 26, Mankey: 56, Primeape: 57, Machop: 66,
+  Machoke: 67, Machamp: 68, Magnemite: 81, Magneton: 82, Voltorb: 100,
+  Electrode: 101, Hitmonlee: 106, Hitmonchan: 107, Electabuzz: 125, Jolteon: 135,
+  Zapdos: 145, Pichu: 172, Mareep: 179, Flaaffy: 180, Ampharos: 181,
+  Tyrogue: 236, Hitmontop: 237, Elekid: 239, Raikou: 243,
+  // Rock, Ground, Ghost, Steel and Dragon (black) — remaining Kanto / Johto species.
+  Sandshrew: 27, Sandslash: 28, Diglett: 50, Dugtrio: 51, Geodude: 74,
+  Graveler: 75, Golem: 76, Gastly: 92, Haunter: 93, Gengar: 94,
+  Onix: 95, Cubone: 104, Marowak: 105, Rhyhorn: 111, Rhydon: 112,
+  Aerodactyl: 142, Dratini: 147, Dragonair: 148, Dragonite: 149, Sudowoodo: 185,
+  Misdreavus: 200, Gligar: 207, Steelix: 208, Skarmory: 227, Phanpy: 231,
+  Donphan: 232, Larvitar: 246, Pupitar: 247,
 };
 
 export function spriteUrl(name: string): string | null {
@@ -97,9 +190,9 @@ function shuffle<T>(values: T[], random: () => number): T[] {
 
 function pickNames(pool: string[], count: number, random: () => number): string[] {
   const early = shuffle(pool.filter((name) => NAME_TO_DEX[name] <= 251), random);
-  // Aim for at least 80% Kanto / Johto wherever the type has enough species.
-  // Fill the remaining slots from all unselected candidates, without repeats.
-  const preferred = early.slice(0, Math.ceil(count * 0.8));
+  // Reserve roughly 80% of slots for Kanto / Johto. Leave at least one open
+  // per pool so later generations can still appear as the early roster grows.
+  const preferred = early.slice(0, Math.round(count * 0.8));
   const remaining = shuffle(pool.filter((name) => !preferred.includes(name)), random);
   return shuffle([...preferred, ...remaining.slice(0, count - preferred.length)], random);
 }

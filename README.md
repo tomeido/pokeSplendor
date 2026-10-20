@@ -93,10 +93,15 @@ energy requirement and they join you automatically for **3 points**.
 
 ## Pokémon sprites
 
-Each new game draws 90 different Pokémon from a 143-species roster, with at least 71 cards
-featuring Kanto or Johto Pokémon (generations 1 and 2). Species are randomized within their
-energy type and tier; Fairy and Dark also include later generations to round out their smaller
-early-generation rosters. Card costs, points and deck sizes follow the original Splendor deck.
+The 290-species roster includes **all 251 Kanto and Johto Pokémon** (generations 1 and 2),
+plus 39 Pokémon from later generations. Each new game draws 90 different species, with at
+least 80 cards featuring generations 1 and 2. Pokémon are randomized within their energy
+group and tier, so every species can appear across new games.
+
+The five energy colors group related Pokémon themes: Fairy also includes Normal, Psychic and Flying;
+Water includes Ice; Grass includes Bug and Poison; Fire includes Electric and Fighting;
+Dark includes Ghost, Rock, Ground, Steel and Dragon. The energy on a card gives its permanent
+discount. Card costs, points and deck sizes follow the original Splendor deck.
 
 Every card shows a cute Pokémon render. The sprites are bundled locally in `public/sprites/<dex>.png`
 so the game needs no external CDN at play time. To re-download / refresh them:

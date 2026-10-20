@@ -9,6 +9,7 @@ import { localizeCard } from '../src/i18n.tsx';
 const TIERS = [1, 2, 3] as const;
 const CARD_COUNTS = { 1: 40, 2: 30, 3: 20 };
 const PER_GEM = { 1: 8, 2: 6, 3: 4 };
+const SEEDED_GAMES = 256;
 const roster = Object.values(POKEMON).flat(2);
 const early = (name: string) => NAME_TO_DEX[name] >= 1 && NAME_TO_DEX[name] <= 251;
 
@@ -31,9 +32,22 @@ function mechanics(cards: Card[]): string {
 // Captured from the original canonical deck, before randomizing Pokémon names.
 const CANONICAL_DECK = '40c5b2d98dd05b17b63ecc29ececdb8eacbe67b6106ba0e86a442435c2b80d11';
 const poolsBefore = JSON.stringify(POKEMON);
-assert.ok(roster.length > 100, 'the roster expands beyond the 90-card deck');
+assert.equal(roster.length, 290, 'all 251 Kanto/Johto species join the existing 39 later species');
 assert.equal(new Set(roster).size, roster.length, 'every species belongs to exactly one gem/tier pool');
-assert.ok(roster.filter(early).length >= roster.length * 0.7, 'the roster primarily features generations 1 and 2');
+assert.equal(new Set(roster.map((name) => NAME_TO_DEX[name])).size, roster.length, 'each active species has a unique National Pokédex number');
+assert.deepEqual(
+  roster.filter(early).map((name) => NAME_TO_DEX[name]).sort((a, b) => a - b),
+  Array.from({ length: 251 }, (_, index) => index + 1),
+  'every generation 1 and 2 species is available in an active pool',
+);
+
+for (const gem of GEM_TYPES) {
+  for (const tier of TIERS) {
+    const pool = POKEMON[gem][tier - 1];
+    assert.ok(pool.length > PER_GEM[tier], `${gem} tier ${tier} can vary between games`);
+    assert.ok(pool.filter(early).length >= Math.round(PER_GEM[tier] * 0.8), `${gem} tier ${tier} can meet its Kanto/Johto quota`);
+  }
+}
 
 for (const name of roster) {
   const dex = NAME_TO_DEX[name];
@@ -53,12 +67,11 @@ assert.deepEqual(buildAllCards(random(42)), first, 'an injected seed reproduces 
 assert.notDeepEqual(buildAllCards(random(43)), first, 'different seeds vary the Pokémon');
 
 const seen = new Set<string>();
-for (let seed = 0; seed < 32; seed++) {
-  const deck = buildAllCards(random(seed));
+function checkDeck(deck: ReturnType<typeof buildAllCards>): void {
   const cards = Object.values(deck).flat();
   assert.equal(mechanics(cards), CANONICAL_DECK, 'random names preserve every card ID, tier, bonus, point and cost');
   assert.equal(new Set(cards.map((card) => card.name)).size, 90, 'a game never repeats a species');
-  assert.ok(cards.filter((card) => early(card.name)).length >= cards.length * 0.75, 'each game favors generations 1 and 2');
+  assert.ok(cards.filter((card) => early(card.name)).length >= 80, 'at least 80 of each game\'s 90 cards feature generations 1 and 2');
 
   for (const tier of TIERS) {
     assert.equal(deck[tier].length, CARD_COUNTS[tier], `tier ${tier} keeps its deck size`);
@@ -71,7 +84,12 @@ for (let seed = 0; seed < 32; seed++) {
     }
   }
 }
-assert.ok(seen.size > 90, 'new games draw from more species than a single deck can hold');
+for (let seed = 0; seed < SEEDED_GAMES; seed++) {
+  checkDeck(buildAllCards(random(seed)));
+}
+assert.deepEqual([...seen].sort(), [...roster].sort(), `every roster species can appear across ${SEEDED_GAMES} seeded games`);
+checkDeck(buildAllCards(() => 0));
+checkDeck(buildAllCards(() => 1 - Number.EPSILON));
 assert.deepEqual(first, firstSnapshot, 'later builds leave earlier decks untouched');
 assert.equal(JSON.stringify(POKEMON), poolsBefore, 'building decks never reorders or consumes the roster');
 
@@ -79,4 +97,4 @@ first[1][0].name = 'Changed';
 first[1][0].cost.white = 999;
 assert.deepEqual(buildAllCards(random(42)), firstSnapshot, 'returned cards and costs are independent of future builds');
 
-console.log(`✓ Pokémon checks passed: ${roster.length} species, ${seen.size} seen across 32 games; canonical deck preserved.`);
+console.log(`✓ Pokémon checks passed: ${roster.length} species, ${seen.size} seen across ${SEEDED_GAMES} seeded games; canonical deck preserved.`);
