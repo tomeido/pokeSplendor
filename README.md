@@ -93,11 +93,16 @@ energy requirement and they join you automatically for **3 points**.
 
 ## Pokémon sprites
 
+Each new game draws 90 different Pokémon from a 143-species roster, with at least 71 cards
+featuring Kanto or Johto Pokémon (generations 1 and 2). Species are randomized within their
+energy type and tier; Fairy and Dark also include later generations to round out their smaller
+early-generation rosters. Card costs, points and deck sizes follow the original Splendor deck.
+
 Every card shows a cute Pokémon render. The sprites are bundled locally in `public/sprites/<dex>.png`
 so the game needs no external CDN at play time. To re-download / refresh them:
 
 ```bash
-npm run sprites    # fetches HOME renders for all ~85 Pokémon used in the deck
+npm run sprites    # fetches HOME renders for the full Pokémon roster
 ```
 
 Sprites come from [PokeAPI/sprites](https://github.com/PokeAPI/sprites) (Pokémon © Nintendo / Game Freak —
@@ -115,6 +120,7 @@ public/      sprites/ (bundled Pokémon images)
 ## Tests
 
 ```bash
+npx tsx server/data.test.ts       # Pokémon variety, generation focus, names, sprites and canonical deck
 npx tsx server/engine.test.ts     # rules engine unit checks
 npx tsx server/ai.test.ts         # AI plays only legal moves; AI-only games terminate
 npx tsx server/browser-transfer.test.ts # isolated server: cross-browser resume, expiry and replay protection

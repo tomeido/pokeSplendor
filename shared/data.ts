@@ -1,5 +1,5 @@
 import type { Card, GemType, Noble } from './types.ts';
-import { emptyCost } from './types.ts';
+import { emptyCost, GEM_TYPES } from './types.ts';
 
 // ── Theming: each Splendor gem colour maps to a Pokémon energy type ──
 export const GEM_THEME: Record<GemType, { label: string; icon: string; color: string }> = {
@@ -11,32 +11,33 @@ export const GEM_THEME: Record<GemType, { label: string; icon: string; color: st
 };
 export const GOLD_THEME = { label: 'Electric', icon: '⚡', color: '#f4c430' };
 
-// Pokémon name pools per gem-type and tier, used to skin the development cards.
-const POKEMON: Record<GemType, [string[], string[], string[]]> = {
+// Type-matched Pokémon pools, with Kanto and Johto at the heart of the roster.
+// Each species belongs to one pool so a game can draw 90 different Pokémon.
+export const POKEMON: Record<GemType, [string[], string[], string[]]> = {
   white: [
-    ['Igglybuff', 'Cleffa', 'Snubbull', 'Ralts', 'Spritzee', 'Flabébé', 'Swirlix', 'Cutiefly'],
-    ['Jigglypuff', 'Clefairy', 'Granbull', 'Kirlia', 'Aromatisse'],
-    ['Wigglytuff', 'Clefable', 'Gardevoir', 'Sylveon'],
+    ['Igglybuff', 'Cleffa', 'Snubbull', 'Togepi', 'Marill', 'Ralts', 'Spritzee', 'Flabébé', 'Swirlix', 'Cutiefly'],
+    ['Jigglypuff', 'Clefairy', 'Granbull', 'Togetic', 'Azumarill', 'Mr. Mime', 'Kirlia', 'Aromatisse', 'Floette', 'Slurpuff', 'Ribombee'],
+    ['Wigglytuff', 'Clefable', 'Gardevoir', 'Sylveon', 'Togekiss', 'Florges'],
   ],
   blue: [
-    ['Squirtle', 'Magikarp', 'Psyduck', 'Poliwag', 'Horsea', 'Staryu', 'Tentacool', 'Krabby'],
-    ['Wartortle', 'Gyarados', 'Golduck', 'Poliwhirl', 'Seadra'],
-    ['Blastoise', 'Vaporeon', 'Lapras', 'Kingdra'],
+    ['Squirtle', 'Magikarp', 'Psyduck', 'Poliwag', 'Horsea', 'Staryu', 'Tentacool', 'Krabby', 'Totodile', 'Wooper', 'Chinchou', 'Goldeen', 'Slowpoke', 'Seel', 'Shellder', 'Remoraid'],
+    ['Wartortle', 'Golduck', 'Poliwhirl', 'Seadra', 'Croconaw', 'Quagsire', 'Seaking', 'Dewgong', 'Cloyster', 'Octillery', 'Lanturn'],
+    ['Blastoise', 'Gyarados', 'Vaporeon', 'Lapras', 'Kingdra', 'Feraligatr', 'Poliwrath', 'Politoed', 'Starmie', 'Tentacruel', 'Kingler', 'Slowbro', 'Slowking', 'Suicune'],
   ],
   green: [
-    ['Bulbasaur', 'Oddish', 'Bellsprout', 'Chikorita', 'Treecko', 'Hoppip', 'Sunkern', 'Seedot'],
-    ['Ivysaur', 'Gloom', 'Weepinbell', 'Bayleef', 'Grovyle'],
-    ['Venusaur', 'Vileplume', 'Victreebel', 'Sceptile'],
+    ['Bulbasaur', 'Oddish', 'Bellsprout', 'Chikorita', 'Hoppip', 'Sunkern', 'Exeggcute', 'Paras'],
+    ['Ivysaur', 'Gloom', 'Weepinbell', 'Bayleef', 'Skiploom', 'Sunflora', 'Parasect', 'Tangela'],
+    ['Venusaur', 'Vileplume', 'Victreebel', 'Meganium', 'Bellossom', 'Jumpluff', 'Exeggutor', 'Celebi'],
   ],
   red: [
-    ['Charmander', 'Vulpix', 'Growlithe', 'Ponyta', 'Cyndaquil', 'Slugma', 'Torchic', 'Litwick'],
-    ['Charmeleon', 'Ninetales', 'Arcanine', 'Rapidash', 'Quilava'],
-    ['Charizard', 'Flareon', 'Typhlosion', 'Magmortar'],
+    ['Charmander', 'Vulpix', 'Growlithe', 'Ponyta', 'Cyndaquil', 'Slugma', 'Magby', 'Torchic', 'Litwick'],
+    ['Charmeleon', 'Ninetales', 'Arcanine', 'Rapidash', 'Quilava', 'Magmar', 'Magcargo'],
+    ['Charizard', 'Flareon', 'Typhlosion', 'Moltres', 'Entei', 'Ho-Oh'],
   ],
   black: [
-    ['Poochyena', 'Houndour', 'Sneasel', 'Murkrow', 'Zorua', 'Purrloin', 'Nickit', 'Impidimp'],
-    ['Mightyena', 'Houndoom', 'Weavile', 'Honchkrow', 'Zoroark'],
-    ['Tyranitar', 'Umbreon', 'Absol', 'Hydreigon'],
+    ['Houndour', 'Sneasel', 'Murkrow', 'Poochyena', 'Zorua', 'Purrloin', 'Nickit', 'Impidimp', 'Deino', 'Pawniard', 'Sandile', 'Scraggy', 'Inkay'],
+    ['Houndoom', 'Mightyena', 'Weavile', 'Honchkrow', 'Zoroark', 'Liepard', 'Bisharp', 'Krookodile', 'Scrafty', 'Malamar'],
+    ['Tyranitar', 'Umbreon', 'Absol', 'Hydreigon', 'Darkrai', 'Yveltal'],
   ],
 };
 
@@ -63,6 +64,18 @@ export const NAME_TO_DEX: Record<string, number> = {
   Poochyena: 261, Houndour: 228, Sneasel: 215, Murkrow: 198, Zorua: 570, Purrloin: 509, Nickit: 827, Impidimp: 859,
   Mightyena: 262, Houndoom: 229, Weavile: 461, Honchkrow: 430, Zoroark: 571,
   Tyranitar: 248, Umbreon: 197, Absol: 359, Hydreigon: 635,
+  // Additional Kanto / Johto Pokémon.
+  Togepi: 175, Marill: 183, Togetic: 176, Azumarill: 184, 'Mr. Mime': 122,
+  Totodile: 158, Wooper: 194, Chinchou: 170, Goldeen: 118, Slowpoke: 79, Seel: 86, Shellder: 90, Remoraid: 223,
+  Croconaw: 159, Quagsire: 195, Seaking: 119, Dewgong: 87, Cloyster: 91, Octillery: 224, Lanturn: 171,
+  Feraligatr: 160, Poliwrath: 62, Politoed: 186, Starmie: 121, Tentacruel: 73, Kingler: 99, Slowbro: 80, Slowking: 199, Suicune: 245,
+  Exeggcute: 102, Paras: 46, Skiploom: 188, Sunflora: 192, Parasect: 47, Tangela: 114,
+  Meganium: 154, Bellossom: 182, Jumpluff: 189, Exeggutor: 103, Celebi: 251,
+  Magby: 240, Magmar: 126, Magcargo: 219, Moltres: 146, Entei: 244, 'Ho-Oh': 250,
+  // Later generations round out Fairy and Dark, which have smaller early rosters.
+  Floette: 670, Slurpuff: 685, Ribombee: 743, Togekiss: 468, Florges: 671,
+  Deino: 633, Pawniard: 624, Sandile: 551, Scraggy: 559, Inkay: 686,
+  Liepard: 510, Bisharp: 625, Krookodile: 553, Scrafty: 560, Malamar: 687, Darkrai: 491, Yveltal: 717,
 };
 
 export function spriteUrl(name: string): string | null {
@@ -73,26 +86,36 @@ export function spriteUrl(name: string): string | null {
   return id ? `${import.meta.env.BASE_URL}sprites/${id}.png` : null;
 }
 
-// Per-type running counters so each card gets the next name from its pool.
-const nameCursor: Record<GemType, [number, number, number]> = {
-  white: [0, 0, 0], blue: [0, 0, 0], green: [0, 0, 0], red: [0, 0, 0], black: [0, 0, 0],
-};
+function shuffle<T>(values: T[], random: () => number): T[] {
+  const result = values.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
-function nextName(bonus: GemType, tier: 1 | 2 | 3): string {
-  const pool = POKEMON[bonus][tier - 1];
-  const i = nameCursor[bonus][tier - 1]++;
-  return pool[i % pool.length];
+function pickNames(pool: string[], count: number, random: () => number): string[] {
+  const early = shuffle(pool.filter((name) => NAME_TO_DEX[name] <= 251), random);
+  // Aim for at least 80% Kanto / Johto wherever the type has enough species.
+  // Fill the remaining slots from all unselected candidates, without repeats.
+  const preferred = early.slice(0, Math.ceil(count * 0.8));
+  const remaining = shuffle(pool.filter((name) => !preferred.includes(name)), random);
+  return shuffle([...preferred, ...remaining.slice(0, count - preferred.length)], random);
 }
 
 // Compact card spec: [bonus, points, white, blue, green, red, black]
 type Spec = [GemType, number, number, number, number, number, number];
 
-function buildTier(tier: 1 | 2 | 3, specs: Spec[]): Card[] {
+function buildTier(tier: 1 | 2 | 3, specs: Spec[], random: () => number): Card[] {
+  const names = new Map(GEM_TYPES.map((bonus) => [
+    bonus, pickNames(POKEMON[bonus][tier - 1], specs.filter((s) => s[0] === bonus).length, random),
+  ]));
   return specs.map((s, idx) => {
     const [bonus, points, w, u, g, r, k] = s;
     const cost = emptyCost();
     cost.white = w; cost.blue = u; cost.green = g; cost.red = r; cost.black = k;
-    return { id: `t${tier}-${idx}`, tier, bonus, points, cost, name: nextName(bonus, tier) };
+    return { id: `t${tier}-${idx}`, tier, bonus, points, cost, name: names.get(bonus)!.pop()! };
   });
 }
 
@@ -163,8 +186,6 @@ export function buildNobles(): Noble[] {
   });
 }
 
-export function buildAllCards(): { 1: Card[]; 2: Card[]; 3: Card[] } {
-  // Reset name cursors so a fresh deck always names cards deterministically.
-  for (const t of ['white', 'blue', 'green', 'red', 'black'] as GemType[]) nameCursor[t] = [0, 0, 0];
-  return { 1: buildTier(1, TIER1), 2: buildTier(2, TIER2), 3: buildTier(3, TIER3) };
+export function buildAllCards(random: () => number = Math.random): { 1: Card[]; 2: Card[]; 3: Card[] } {
+  return { 1: buildTier(1, TIER1, random), 2: buildTier(2, TIER2, random), 3: buildTier(3, TIER3, random) };
 }

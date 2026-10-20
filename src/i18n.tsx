@@ -19,22 +19,32 @@ const KO_NAME: Record<string, string> = {
   Igglybuff: '푸푸린', Cleffa: '삐', Snubbull: '블루', Ralts: '랄토스', Spritzee: '슈쁘', Flabébé: '플라베베', Swirlix: '나룸퍼프', Cutiefly: '에블리',
   Jigglypuff: '푸린', Clefairy: '삐삐', Granbull: '그랑블루', Kirlia: '킬리아', Aromatisse: '프레프티르',
   Wigglytuff: '푸크린', Clefable: '픽시', Gardevoir: '가디안', Sylveon: '님피아',
+  Togepi: '토게피', Marill: '마릴', Togetic: '토게틱', Azumarill: '마릴리', 'Mr. Mime': '마임맨',
+  Floette: '플라엣테', Slurpuff: '나루림', Ribombee: '에리본', Togekiss: '토게키스', Florges: '플라제스',
   // Water
   Squirtle: '꼬부기', Magikarp: '잉어킹', Psyduck: '고라파덕', Poliwag: '발챙이', Horsea: '쏘드라', Staryu: '별가사리', Tentacool: '왕눈해', Krabby: '크랩',
   Wartortle: '어니부기', Gyarados: '갸라도스', Golduck: '골덕', Poliwhirl: '슈륙챙이', Seadra: '시드라',
   Blastoise: '거북왕', Vaporeon: '샤미드', Lapras: '라프라스', Kingdra: '킹드라',
+  Totodile: '리아코', Wooper: '우파', Chinchou: '초라기', Goldeen: '콘치', Slowpoke: '야돈', Seel: '쥬쥬', Shellder: '셀러', Remoraid: '총어',
+  Croconaw: '엘리게이', Quagsire: '누오', Seaking: '왕콘치', Dewgong: '쥬레곤', Cloyster: '파르셀', Octillery: '대포무노', Lanturn: '랜턴',
+  Feraligatr: '장크로다일', Poliwrath: '강챙이', Politoed: '왕구리', Starmie: '아쿠스타', Tentacruel: '독파리', Kingler: '킹크랩', Slowbro: '야도란', Slowking: '야도킹', Suicune: '스이쿤',
   // Grass
   Bulbasaur: '이상해씨', Oddish: '뚜벅쵸', Bellsprout: '모다피', Chikorita: '치코리타', Treecko: '나무지기', Hoppip: '통통코', Sunkern: '해너츠', Seedot: '도토링',
   Ivysaur: '이상해풀', Gloom: '냄새꼬', Weepinbell: '우츠동', Bayleef: '베이리프', Grovyle: '나무돌이',
   Venusaur: '이상해꽃', Vileplume: '라플레시아', Victreebel: '우츠보트', Sceptile: '나무킹',
+  Exeggcute: '아라리', Paras: '파라스', Skiploom: '두코', Sunflora: '해루미', Parasect: '파라섹트', Tangela: '덩쿠리',
+  Meganium: '메가니움', Bellossom: '아르코', Jumpluff: '솜솜코', Exeggutor: '나시', Celebi: '세레비',
   // Fire
   Charmander: '파이리', Vulpix: '식스테일', Growlithe: '가디', Ponyta: '포니타', Cyndaquil: '브케인', Slugma: '마그마그', Torchic: '아차모', Litwick: '불켜미',
   Charmeleon: '리자드', Ninetales: '나인테일', Arcanine: '윈디', Rapidash: '날쌩마', Quilava: '마그케인',
   Charizard: '리자몽', Flareon: '부스터', Typhlosion: '블레이범', Magmortar: '마그마번',
+  Magby: '마그비', Magmar: '마그마', Magcargo: '마그카르고', Moltres: '파이어', Entei: '앤테이', 'Ho-Oh': '칠색조',
   // Dark
   Poochyena: '포챠나', Houndour: '델빌', Sneasel: '포푸니', Murkrow: '니로우', Zorua: '조로아', Purrloin: '쌔비냥', Nickit: '훔처우', Impidimp: '메롱꿍',
   Mightyena: '그라에나', Houndoom: '헬가', Weavile: '포푸니라', Honchkrow: '돈크로우', Zoroark: '조로아크',
   Tyranitar: '마기라스', Umbreon: '블래키', Absol: '앱솔', Hydreigon: '삼삼드래',
+  Deino: '모노두', Pawniard: '자망칼', Sandile: '깜눈크', Scraggy: '곤율랭', Inkay: '오케이징',
+  Liepard: '레파르다스', Bisharp: '절각참', Krookodile: '악비아르', Scrafty: '곤율거니', Malamar: '칼라마네로', Darkrai: '다크라이', Yveltal: '이벨타르',
 };
 
 // ── Gym Leaders / Champions (English → 한국어) ──
