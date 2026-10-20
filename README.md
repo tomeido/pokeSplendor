@@ -113,6 +113,9 @@ npm run sprites    # fetches HOME renders for the full Pokémon roster
 Sprites come from [PokeAPI/sprites](https://github.com/PokeAPI/sprites) (Pokémon © Nintendo / Game Freak —
 used here for a personal, non-commercial project).
 
+Open tabs check the client version when reconnecting or returning to the page and refresh
+after an update, keeping Pokémon images and translated names in sync with the server.
+
 ## Project layout
 
 ```
@@ -140,6 +143,7 @@ against an **isolated** production build served under `/splendor` (the tests cre
 TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=webkit node tests/browser-transfer-navigation.cjs
 TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/browser-transfer-navigation.cjs
 TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/energy-confirmation.cjs
+TEST_ORIGIN=http://localhost:3001 TEST_BROWSER=chromium node tests/pokemon-images.cjs
 ```
 
 `PLAYWRIGHT_PATH` can point to an external Playwright installation and `CHROMIUM_PATH` to a
@@ -148,3 +152,5 @@ already-joined lobby tabs, and a simulated BFCache restoration with a newly rece
 The energy confirmation test runs desktop clicks and mobile touches with two human players,
 checking that selecting, canceling, or changing **+2** sends no move; only **Take energy**
 collects the tokens. It also checks ordinary three-energy confirmation and turn/bank limits.
+The Pokémon image test checks decoded card images and Korean names on desktop and mobile,
+cache headers, and resuming the same seat after refreshing an outdated client.

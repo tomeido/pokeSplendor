@@ -17,6 +17,18 @@ const isProd = process.env.NODE_ENV === 'production';
 // exposes — static assets, the SPA fallback, and the Socket.IO endpoint — must live
 // under it. Empty by default, so the app still serves from the root.
 const BASE_PATH = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+const dist = path.resolve(__dirname, '..', 'dist');
+const indexFile = path.join(dist, 'index.html');
+let clientAsset: string | null = null;
+if (isProd) {
+  try {
+    const html = fs.readFileSync(indexFile, 'utf8');
+    const entry = html.match(/<script\b(?=[^>]*\btype=["']module["'])[^>]*\bsrc=["']([^"']+)["']/i);
+    if (entry) clientAsset = new URL(entry[1], 'http://localhost').pathname;
+  } catch {
+    // A missing build must not stop isolated server-only tests from starting.
+  }
+}
 
 interface Member {
   id: string;
@@ -107,6 +119,9 @@ const io = new Server(server, { path: `${BASE_PATH}/socket.io`, cors: { origin: 
 // Read-only endpoint so the counts can be checked directly (must be registered
 // before the SPA catch-all fallback below).
 app.get(`${BASE_PATH}/api/stats`, (_req, res) => res.json(stats));
+app.get(`${BASE_PATH}/api/client-version`, (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({ asset: clientAsset });
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function lobbyPayload(room: Room) {
@@ -280,6 +295,9 @@ function bindMember(socket: Socket, room: Room, member: Member) {
 
 // ── Socket handlers ──────────────────────────────────────────────────────
 io.on('connection', (socket) => {
+  // An open browser reconnects after deployment. Let it refresh its old bundle
+  // before rendering Pokémon names sent by a newer server.
+  socket.emit('clientVersion', { asset: clientAsset });
   // Send the current counts right away so the badge shows without waiting for a load event.
   socket.emit('stats', stats);
   // One page view per socket (guards against a flapping reconnect inflating the count).
@@ -541,12 +559,21 @@ io.on('connection', (socket) => {
 
 // ── Static client in production ──────────────────────────────────────────
 if (isProd) {
-  const dist = path.resolve(__dirname, '..', 'dist');
-  app.use(BASE_PATH || '/', express.static(dist));
+  app.use(`${BASE_PATH}/assets`, express.static(path.join(dist, 'assets'), {
+    maxAge: '1y', immutable: true,
+  }));
+  app.use(BASE_PATH || '/', express.static(dist, {
+    setHeaders(res, filePath) {
+      if (filePath === indexFile) res.setHeader('Cache-Control', 'no-store');
+    },
+  }));
   // SPA fallback for anything under the base path, plus the bare base itself
   // (assets are referenced absolutely, so the bare path renders fine).
-  app.get(`${BASE_PATH}/*`, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
-  if (BASE_PATH) app.get(BASE_PATH, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  const sendIndex = (_req: express.Request, res: express.Response) => {
+    res.sendFile(indexFile, { headers: { 'Cache-Control': 'no-store' } });
+  };
+  app.get(`${BASE_PATH}/*`, sendIndex);
+  if (BASE_PATH) app.get(BASE_PATH, sendIndex);
 }
 
 server.listen(PORT, () => {

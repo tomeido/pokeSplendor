@@ -5,10 +5,10 @@ import { localizeCard, useLang } from '../i18n.tsx';
 
 /** A Pokémon sprite that falls back to the energy-type icon if the image is missing. */
 export function Sprite({ name, bonus, className = 'card-sprite' }: { name: string; bonus: GemType; className?: string }) {
-  const [err, setErr] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const url = spriteUrl(name);
-  if (!url || err) return <span className={`${className} sprite-fallback`}>{GEM_THEME[bonus].icon}</span>;
-  return <img className={className} src={url} alt={name} loading="lazy" draggable={false} onError={() => setErr(true)} />;
+  if (!url || failedUrl === url) return <span className={`${className} sprite-fallback`}>{GEM_THEME[bonus].icon}</span>;
+  return <img key={url} className={className} src={url} alt={name} loading="lazy" draggable={false} onError={() => setFailedUrl(url)} />;
 }
 
 export function themeOf(t: TokenType) {

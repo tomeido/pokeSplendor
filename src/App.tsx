@@ -14,6 +14,7 @@ import { Lobby } from './components/Lobby.tsx';
 import { Game } from './components/Game.tsx';
 import { Chat } from './components/Chat.tsx';
 import { FullscreenHelp } from './components/FullscreenHelp.tsx';
+import { checkClientVersion, receiveClientVersion } from './client-version.ts';
 
 export interface LobbyData {
   roomId: string;
@@ -211,6 +212,19 @@ export function App() {
   }, [acceptSeat]);
 
   useEffect(() => {
+    const checkVisibleClient = () => {
+      if (document.visibilityState === 'visible') void checkClientVersion();
+    };
+    window.addEventListener('pageshow', checkVisibleClient);
+    document.addEventListener('visibilitychange', checkVisibleClient);
+    return () => {
+      window.removeEventListener('pageshow', checkVisibleClient);
+      document.removeEventListener('visibilitychange', checkVisibleClient);
+    };
+  }, []);
+
+  useEffect(() => {
+    socket.on('clientVersion', receiveClientVersion);
     socket.on('connect', () => {
       setConnected(true);
       // Count this page load exactly once (not again on later reconnects).
@@ -269,6 +283,7 @@ export function App() {
     );
     socket.connect();
     return () => {
+      socket.off('clientVersion', receiveClientVersion);
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
